@@ -1,0 +1,100 @@
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+3 Faces have errors.
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+PGFace Invalid in Triangulate_DBA
+/home/sajied/l/pipeline/.venv/lib/python3.14/site-packages/openvsp/vspaero -omp 1 /home/sajied/l/pipeline/runs/baseline/baseline-0007/geom/model
+Setting Sref to: 15.930633 
+Setting Cref to: 1.633791 
+Setting Bref to: 9.953143 
+Setting X_cg to: 3.949562 
+Setting Y_cg to: 0.000000 
+Setting Z_cg to: 0.000000 
+Number of Machs: 1 
+Mach: 0.029386 
+Number of AoAs: 2 
+AoA: 0.000000 
+AoA: 4.000000 
+Number of Betas: 1 
+Beta: 0.000000 
+Number of ReCs: 1 
+ReC: 1633790.953751 
+Setting Vinf to: 10.000000 
+Setting Rho to: 1.000000 
+Setting StallModel to: 0 
+Setting Clo2D to: 0.000000 
+Setting CLMax2D to: 1.000000 
+Setting Symmetry to: 0 
+Setting FreezeMultiPoleAtIteration to: 10000 
+Setting FreezeWakeAtIteration to: 10000 
+Setting FreezeWakeRootVortices to: 0 
+Setting ImplicitWake to: 0 
+Setting ImplicitWakeStartIteration_ to: 0 
+Setting FarDist to: -1.000000 
+Setting NumWakeNodes to: 8 
+Setting WakeIters to: 5 
+Setting WakeRelax to: 1.000000 
+Setting ForwardGMRESConvergenceFactor to: 1.000000e+00 
+Setting AdjointGMRESConvergenceFactor_ to: 1.000000e+00 
+Setting NonLinearConvergenceFactor to: 1.000000e+00 
+Setting CoreSizeFactor to: 1.000000 
+Setting multipole FarAway factor to: 5.000000 
+Setting UpdateMatrixPreconditioner flag to: 0 
+Setting UseWakeNodeMatrixPreconditioner flag to: 0 
+Setting QuadTreeBufferLevels_ flag to: 0 
+Number of NumberOfAdjointForceAndMomentCases_: 0 
+Number of NumberOfAdjointComponentListSettings_: 0 
+Setting Write2DFEMFile to: 0 
+Setting WriteTecplotFile to: 0 
+Sref            = 15.930633 
+Cref            = 1.633791 
+Bref            = 9.953143 
+X_cg            = 3.949562 
+Y_cg            = 0.000000 
+Z_cg            = 0.000000 
+Mach            = 0.029386 
+AoA             = 0.000000, 4.000000 
+Beta            = 0.000000 
+Vinf            = 10.000000 
+Vref            = 10.000000 
+Rho             = 1.000000 
+ReCref          = 1633790.953751 
+StallModel      = 0  
+Clo2D           = 0.000000 
+CLMax2D_        = 1.000000 
+Symmetry        = 0  
+FarDist         = -1.000000 
+NumWakeNodes    = 8  
+WakeIters       = 5  
+NumberOfControlGroups = 0 
+NumberofSurveyPoints: 0 
+NumberOfQuadTrees: 1 
+QuadTree(1):          2:    0.00000 
+NumberOfInlets: 0 
+NumberOfNozzles: 0 
+NumberOfInlets: 0 
+NumberOfNozzles: 0 
+VSPAERO v.7.2.2 --- Compiled on: Nov 22 2026 at 17:50:00 PST 
+
+
+
+
+Initializing OPENMP for 1 threads 
+NumberOfThreads_: 1 
+_OPENMP Version string: 201511
+NumNodes: 1661 
+MaxNumberOfGridLevels_: 20 
+NumLoops: 1603 
+NumNodesInList: 49 
+KuttaNodeList_[1]: 1638 
+KuttaNodeList_[2]: 1617 
+KuttaNodeList_[3]: 1596 
+KuttaNodeList_[4]: 1

@@ -1,0 +1,109 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _45e7c4a0-20241224 OPENFOAM=2412 version=2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : surfaceCheck -checkSelfIntersection open.stl
+Date   : Nov 23 2026
+Time   : 15:07:40
+Host   : 4ce1b93bb3a1
+PID    : 214
+I/O    : uncollated
+Case   : /case
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Reading surface from "open.stl" ...
+
+Statistics:
+Triangles    : 5157 in 1 region(s)
+Vertices     : 2592
+Bounding Box : (0 -4.06781 -0.698097) (10 4.06781 2)
+
+Index	Region	Size
+-----	------	----
+0	solid	5157
+
+
+Surface has 1 illegal triangles.
+--> FOAM Warning : 
+    From static bool Foam::triSurfaceTools::validTri(const Foam::triSurface&, Foam::label, bool)
+    in file triSurface/triSurfaceTools/triSurfaceTools.C at line 2703
+    triangle 5156 uses non-unique vertices ((2590 2590 2591) 0) coords:3((1 1 1) (1 1 1) (2 2 2))
+Dumping conflicting face labels to "illegalFaces"
+Paste this into the input for surfaceSubset
+
+Triangle quality (equilateral=1, collapsed=0):
+    0 .. 0.05  : 0.0250145
+    0.05 .. 0.1  : 0.0267597
+    0.1 .. 0.15  : 0.0620516
+    0.15 .. 0.2  : 0.072135
+    0.2 .. 0.25  : 0.0694202
+    0.25 .. 0.3  : 0.0888113
+    0.3 .. 0.35  : 0.0659298
+    0.35 .. 0.4  : 0.157068
+    0.4 .. 0.45  : 0.0802792
+    0.45 .. 0.5  : 0.0461509
+    0.5 .. 0.55  : 0.0430483
+    0.55 .. 0.6  : 0.0496413
+    0.6 .. 0.65  : 0.0449874
+    0.65 .. 0.7  : 0.0484778
+    0.7 .. 0.75  : 0.0550708
+    0.75 .. 0.8  : 0.0345162
+    0.8 .. 0.85  : 0.024045
+    0.85 .. 0.9  : 0.00310258
+    0.9 .. 0.95  : 0.00193911
+    0.95 .. 1  : 0.00155129
+
+    min 0 for triangle 5156
+    max 0.996767 for triangle 1429
+
+--> FOAM Warning : 
+    From int main(int, char**)
+    in file surfaceCheck.C at line 590
+    Minimum triangle quality is 0. This might give problems in self-intersection testing later on.
+Dumping bad quality faces to "badFaces"
+Paste this into the input for surfaceSubset
+
+
+Edges:
+    min 0 for edge 7745 points (1 1 1)(1 1 1)
+    max 1.73205 for edge 7746 points (1 1 1)(2 2 2)
+
+Checking for points less than 1e-6 of bounding box ((10 8.13563 2.6981) metre) apart.
+Found 0 nearby points.
+
+Surface is not closed since not all edges (7748) connected to two faces:
+    connected to one face : 25
+    connected to >2 faces : 0
+Conflicting face labels:25
+
+Number of unconnected parts : 2
+Splitting surface into parts ...
+
+Wrote zoning to "./open.vtp"
+
+writing part 0 size 5156 to "./open_0.obj"
+writing part 1 size 1 to "./open_1.obj"
+
+Number of zones (connected area with consistent normal) : 2
+More than one normal orientation.
+Wrote zoning to "./open.vtp"
+
+writing part 0 size 5156 to "./open_normal_0.obj"
+writing part 1 size 1 to "./open_normal_1.obj"
+
+Checking self-intersection.
+Surface is self-intersecting at 14 locations.
+Writing intersection points to "selfInterPoints.obj"
+
+
+End
+

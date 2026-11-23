@@ -61,6 +61,14 @@ class Geometry(_Strict):
     fuselage_length: float = Field(gt=0)
 
 
+class Tessellation(_Strict):
+    """Numerical: OpenVSP surface tessellation for the STL export (may be auto-refined)."""
+    fus_tess_u: int = Field(ge=3)
+    fus_tess_w: int = Field(ge=3)
+    wing_tess_w: int = Field(ge=3)
+    wing_sect_tess_u: int = Field(ge=2)
+
+
 class MeshSettings(_Strict):
     """Numerical: may be auto-corrected."""
     base_cell_size: float = Field(gt=0)
@@ -87,6 +95,7 @@ class StudyConfig(_Strict):
     geometry: Geometry
     freestream: Freestream
     alphas: tuple[float, float]       # deg; second warm-started from first
+    tessellation: Tessellation
     mesh: MeshSettings
     solver: SolverSettings
     workers: int = Field(ge=1)
@@ -102,16 +111,22 @@ class StudyConfig(_Strict):
 
 
 # Sections a correction may touch. Everything else is physics or design.
-NUMERICAL_SECTIONS = ("mesh", "solver")
+NUMERICAL_SECTIONS = ("tessellation", "mesh", "solver")
 
 
 # ---------------------------------------------------------------- gates
 # A null threshold means "not decided yet". Gate code must treat an undecided
 # check as not passable (fail/flag), never as a pass.
+# "warn" = record the metric (severity 'warn') but never block on it.
+Warn = Literal["warn"]
+
+
 class Gate0(_Strict):
     require_closed: bool = True
-    max_self_intersections: int | None = None
-    min_triangle_quality: float | None = None
+    max_illegal_triangles: int = Field(ge=0)
+    max_self_intersections: int | Warn | None = None
+    min_triangle_quality: float | Warn | None = None
+    min_tip_chord_cells: float | None = None   # tip chord / finest surface cell
 
 
 class Gate1(_Strict):

@@ -29,6 +29,12 @@ freestream:           # confirmed 2026-11-23
 
 alphas: [0.0, 4.0]    # deg (PLAN.md example)
 
+tessellation:         # numerical (may be auto-refined); Phase 0 smoke values
+  fus_tess_u: 33
+  fus_tess_w: 33
+  wing_tess_w: 41
+  wing_sect_tess_u: 25
+
 mesh:                 # numerical; from the Phase 0 smoke run (114k cells, Mesh OK)
   base_cell_size: 2.5
   surface_level: [5, 6]

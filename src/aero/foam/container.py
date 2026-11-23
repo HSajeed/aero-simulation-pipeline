@@ -41,6 +41,16 @@ class ContainerResult:
     wall_time_s: float
 
 
+def unique_path(p: Path) -> Path:
+    """p if free, else p.1, p.2, ...: logs are history and are never overwritten."""
+    if not p.exists():
+        return p
+    n = 1
+    while p.with_name(f"{p.name}.{n}").exists():
+        n += 1
+    return p.with_name(f"{p.name}.{n}")
+
+
 def build_command(case_dir: Path, script_name: str, engine: str = "podman",
                   image: str = IMAGE) -> list[str]:
     if engine == "podman":
@@ -68,7 +78,7 @@ def run_script(case_dir: Path | str, body: str, name: str, *,
     script = case_dir / f"{name}.sh"
     script.write_text(_PREAMBLE + body.strip() + "\n")
     script.chmod(0o755)
-    log = case_dir / f"log.{name}"
+    log = unique_path(case_dir / f"log.{name}")
     cmd = build_command(case_dir, script.name, engine, image)
     t0 = time.monotonic()
     with log.open("w") as fh:

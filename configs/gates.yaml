@@ -2,10 +2,12 @@
 # as not passable (fail / flag), never as a pass.
 max_correction_attempts: 3      # CLAUDE.md rule 3 (validated <= 3)
 
-gate0:                          # geometry / STL
+gate0:                          # geometry / STL ("warn" = recorded, never blocks)
   require_closed: true
-  max_self_intersections: null  # DECISION NEEDED: Phase 0 STL had 23
-  min_triangle_quality: null    # DECISION NEEDED: Phase 0 STL min was 1e-5
+  max_illegal_triangles: 0      # confirmed 2026-11-23
+  max_self_intersections: warn  # confirmed 2026-11-23: revisit after Phase 2 data
+  min_triangle_quality: warn    # confirmed 2026-11-23
+  min_tip_chord_cells: 12       # confirmed 2026-11-23: tip chord / finest surface cell size
 
 gate1:                          # mesh (PLAN.md Phase 3)
   max_non_orth: 70
@@ -24,7 +26,7 @@ gate2:                          # pilot (PLAN.md Phase 4)
 gate3:                          # plausibility (PLAN.md Phase 5)
   max_cl_rel_diff_vspaero: 0.25
   max_mass_imbalance: 1.0e-3    # fraction of inflow
-  coeff_std_window: null        # DECISION NEEDED
-  max_coeff_std: null           # DECISION NEEDED
-  cl_alpha_slope_range: null    # DECISION NEEDED (per rad)
-  min_cd: null                  # DECISION NEEDED (inviscid CD ~ 0)
+  coeff_std_window: 200         # confirmed 2026-11-23 (iterations)
+  max_coeff_std: 1.0e-3         # confirmed: absolute std of CL over the window
+  cl_alpha_slope_range: [3.0, 6.0]  # confirmed (per rad); Helmbold 3.85-5.25 over design space
+  min_cd: 0.0                   # confirmed: negative CD is flagged

@@ -88,6 +88,7 @@ class Metric:
     value: float | None
     threshold: float | None
     passed: bool
+    severity: str = "gate"    # "warn": recorded, never decides the gate
 
 
 @dataclass
@@ -111,6 +112,9 @@ class RunContext:
     params: dict[str, float]
     settings: dict[str, Any]     # resolved study config + replayed corrections
     attempt: int = 0
+    con: Any = None              # sqlite3 connection (set by the runner)
+    gates: dict[str, Any] = field(default_factory=dict)
+    corrections: dict[str, Any] = field(default_factory=dict)
 
 
 class Stage(Protocol):
@@ -187,9 +191,10 @@ def load_context(con, runs_dir: Path, run_id: str) -> RunContext:
 # -------------------------------------------------------------------- runner
 class Runner:
     def __init__(self, runs_dir: Path, gates: GatesConfig, impls: dict[str, Stage],
-                 log: Callable[[str], None] = print):
+                 log: Callable[[str], None] = print, corrections: dict | None = None):
         self.runs_dir = Path(runs_dir)
         self.gates = gates
+        self.corrections = corrections or {}
         self.impls = impls        # stage name -> implementation; missing = not built yet
         self.log = log
 
@@ -232,7 +237,9 @@ class Runner:
         attempt = len(db.corrections_for(con, run_id, sp.gate))
         while True:
             ctx = load_context(con, self.runs_dir, run_id)
-            ctx.attempt = attempt
+            ctx.attempt, ctx.con = attempt, con
+            ctx.gates = self.gates.model_dump(mode="json")
+            ctx.corrections = self.corrections
             try:
                 gate = impl.check(ctx, impl.run(ctx))
             except Exception as e:  # a stage crash is a gate failure, never a pass
@@ -241,7 +248,8 @@ class Runner:
                 self.log(f"{run_id}: {sp.name} raised {e!r}")
             db.add_gate_results(con, run_id, sp.gate, attempt,
                                 [{"metric": m.metric, "value": m.value,
-                                  "threshold": m.threshold, "pass": m.passed}
+                                  "threshold": m.threshold, "pass": m.passed,
+                                  "severity": m.severity}
                                  for m in gate.metrics])
             if gate.passed:
                 self._set(con, ctx, sp.ok)

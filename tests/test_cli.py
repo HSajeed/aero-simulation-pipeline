@@ -6,7 +6,8 @@ from conftest import ROOT
 cli = CliRunner()
 
 
-def test_init_status_run(tmp_path):
+def test_init_status_run(tmp_path, monkeypatch):
+    monkeypatch.setattr("aero.cli.impls", lambda: {})   # no real stages in this test
     cfg = str(ROOT / "configs/study_baseline.yaml")
     r = cli.invoke(app, ["init-study", cfg, "--runs-dir", str(tmp_path)])
     assert r.exit_code == 0 and "created 10 PENDING" in r.output

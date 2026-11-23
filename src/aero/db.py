@@ -76,6 +76,31 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_runs_study ON runs(study);
     CREATE INDEX idx_corr_run ON corrections(run, gate);
     """,
+    # v2: warn-only metrics, geometry reference values, VSPAERO reference results
+    """
+    ALTER TABLE gate_results ADD COLUMN severity TEXT NOT NULL DEFAULT 'gate';
+    CREATE TABLE geometry (
+        run TEXT PRIMARY KEY REFERENCES runs(id),
+        sref_full REAL NOT NULL,
+        sref_half REAL NOT NULL,
+        span REAL NOT NULL,
+        mac REAL NOT NULL,
+        x_ref REAL NOT NULL,
+        tip_chord REAL NOT NULL,
+        stl_area REAL,
+        n_triangles INTEGER,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    );
+    CREATE TABLE reference_results (
+        run TEXT NOT NULL REFERENCES runs(id),
+        source TEXT NOT NULL,
+        alpha REAL NOT NULL,
+        CL REAL, CDi REAL, Cm REAL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (run, source, alpha)
+    );
+    """,
 ]
 
 
@@ -169,10 +194,31 @@ def add_gate_results(con, run_id: str, gate: str, attempt: int,
                      metrics: list[dict[str, Any]]) -> None:
     t = now()
     con.executemany(
-        "INSERT INTO gate_results (run, gate, attempt, metric, value, threshold, pass, created_at)"
-        " VALUES (?,?,?,?,?,?,?,?)",
+        "INSERT INTO gate_results (run, gate, attempt, metric, value, threshold, pass,"
+        " severity, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
         [(run_id, gate, attempt, m["metric"], m.get("value"), m.get("threshold"),
-          int(bool(m["pass"])), t) for m in metrics])
+          int(bool(m["pass"])), m.get("severity", "gate"), t) for m in metrics])
+
+
+def put_geometry(con, run_id: str, g: dict[str, Any]) -> None:
+    keys = ("sref_full", "sref_half", "span", "mac", "x_ref", "tip_chord", "stl_area", "n_triangles")
+    con.execute(
+        "INSERT OR REPLACE INTO geometry (run, %s, data, created_at) VALUES (?, %s, ?, ?)"
+        % (", ".join(keys), ", ".join("?" * len(keys))),
+        (run_id, *(g.get(k) for k in keys), json.dumps(g), now()))
+
+
+def clear_reference(con, run_id: str, source: str) -> None:
+    """Drop a run's stale reference rows (e.g. a later attempt's VSPAERO failed)."""
+    con.execute("DELETE FROM reference_results WHERE run=? AND source=?", (run_id, source))
+
+
+def put_reference(con, run_id: str, source: str, rows: list[dict[str, float]]) -> None:
+    clear_reference(con, run_id, source)
+    t = now()
+    con.executemany(
+        "INSERT OR REPLACE INTO reference_results VALUES (?,?,?,?,?,?,?)",
+        [(run_id, source, r["alpha"], r.get("CL"), r.get("CDi"), r.get("Cm"), t) for r in rows])
 
 
 def add_correction(con, run_id: str, gate: str, code: str, action: str, param: str,

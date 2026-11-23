@@ -17,9 +17,14 @@ app = typer.Typer(no_args_is_help=True, add_completion=False)
 
 RunsDir = typer.Option(Path("runs"), "--runs-dir", help="Runs root (DB at <runs-dir>/runs.db)")
 GatesOpt = typer.Option(Path("configs/gates.yaml"), "--gates", help="Gates config")
+CorrOpt = typer.Option(Path("configs/corrections.yaml"), "--corrections",
+                       help="Correction rules")
 
-# Stage implementations are registered here as phases land (Phase 2: geom, ...).
-IMPLS: dict = {}
+
+def impls() -> dict:
+    """Stage implementations, registered as phases land."""
+    from aero.geom.stage import GeomStage
+    return {"geom": GeomStage()}
 
 
 def _study_cfg(con, study: str) -> StudyConfig:
@@ -46,7 +51,7 @@ def run(study: str, run_id: Optional[str] = typer.Option(None, "--run"),
         stage: Optional[str] = typer.Option(None, "--stage", help=f"one of {STAGE_NAMES}"),
         force: bool = typer.Option(False, "--force", help="rerun --stage on a run past it"),
         workers: Optional[int] = typer.Option(None, "--workers"),
-        runs_dir: Path = RunsDir, gates: Path = GatesOpt):
+        runs_dir: Path = RunsDir, gates: Path = GatesOpt, corrections: Path = CorrOpt):
     """Advance runs through the pipeline (idempotent, resumable)."""
     if stage is not None and stage not in STAGE_NAMES:
         typer.echo(f"--stage must be one of {STAGE_NAMES}", err=True)
@@ -56,7 +61,8 @@ def run(study: str, run_id: Optional[str] = typer.Option(None, "--run"),
         raise typer.Exit(2)
     con = db.connect(db_path(runs_dir))
     cfg = _study_cfg(con, study)
-    runner = Runner(runs_dir, load_gates(gates), IMPLS)
+    from aero.corrections import rules
+    runner = Runner(runs_dir, load_gates(gates), impls(), corrections=rules.load(corrections))
     ids = [run_id] if run_id else [r["id"] for r in db.list_runs(con, study)]
     if force:
         for rid in ids:

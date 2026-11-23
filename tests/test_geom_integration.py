@@ -1,0 +1,76 @@
+"""Real OpenVSP + container. Skipped when either is unavailable."""
+import json
+import shutil
+import subprocess
+
+import pytest
+import yaml
+
+from aero import db
+from aero.corrections import rules
+from aero.geom.stage import GeomStage
+from aero.runner import Runner, db_path, init_study
+from aero.status import Status
+from conftest import ROOT
+
+
+def _available():
+    try:
+        import openvsp  # noqa: F401
+    except Exception:
+        return False
+    from aero.foam.container import IMAGE
+    return shutil.which("podman") is not None and subprocess.run(
+        ["podman", "image", "exists", IMAGE]).returncode == 0
+
+
+pytestmark = pytest.mark.skipif(not _available(), reason="needs openvsp + podman image")
+
+
+def _one_run_study(tmp_path, study_cfg, params):
+    cfg = study_cfg.model_copy(update={"name": "t",
+                                       "sampling": study_cfg.sampling.model_copy(update={"n": 1})})
+    init_study(cfg, tmp_path)
+    rdir = tmp_path / "t" / "t-0001"
+    frozen = yaml.safe_load((rdir / "config.yaml").read_text())
+    frozen["params"] = params                     # pin the geometry for the test
+    (rdir / "config.yaml").write_text(yaml.safe_dump(frozen))
+    return Runner(tmp_path, gates_cfg_global, {"geom": GeomStage()}, log=lambda m: None,
+                  corrections=rules.load(ROOT / "configs/corrections.yaml"))
+
+
+gates_cfg_global = None
+
+
+@pytest.fixture(autouse=True)
+def _gates(gates_cfg):
+    global gates_cfg_global
+    gates_cfg_global = gates_cfg
+
+
+GOOD = {"span": 10.0, "sweep_le": 5.0, "taper": 0.5, "twist_tip": 2.0, "fuselage_fineness": 8.0}
+
+
+def test_good_geometry_passes(tmp_path, study_cfg):
+    r = _one_run_study(tmp_path, study_cfg, GOOD)
+    assert r.run_one("t-0001") == Status.GEOM_OK
+    con = db.connect(db_path(tmp_path))
+    g = con.execute("SELECT * FROM geometry").fetchone()
+    assert g["sref_half"] == pytest.approx(10 * 2 * 1.5 / 4)
+    data = json.loads(g["data"])
+    assert data["vsp_wing_total_area"] == pytest.approx(g["sref_full"], rel=1e-6)
+    assert data["stl_area"] == pytest.approx(data["compgeom_total_wet_area"], rel=1e-3)
+    ref = con.execute("SELECT alpha, CL FROM reference_results ORDER BY alpha").fetchall()
+    assert [row["alpha"] for row in ref] == [0.0, 4.0] and ref[1]["CL"] > ref[0]["CL"]
+    assert (tmp_path / "t/t-0001/geom/log.surfaceCheck.a0").exists()
+
+
+def test_bad_geometry_tiny_tip_unrecoverable(tmp_path, study_cfg):
+    r = _one_run_study(tmp_path, study_cfg, {**GOOD, "taper": 0.05})   # tip chord 0.1 m
+    assert r.run_one("t-0001") == Status.UNRECOVERABLE
+    con = db.connect(db_path(tmp_path))
+    row = db.get_run(con, "t-0001")
+    assert row["failure_code"] == "FEATURE_TOO_SMALL"
+    assert db.corrections_for(con, "t-0001") == []        # design is never "healed"
+    params = yaml.safe_load((tmp_path / "t/t-0001/config.yaml").read_text())["params"]
+    assert params["taper"] == 0.05

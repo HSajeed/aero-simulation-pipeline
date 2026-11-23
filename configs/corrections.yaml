@@ -1,0 +1,6 @@
+# Automatic corrections: gate -> failure code -> action. Numerical only.
+# Codes without an entry are not auto-corrected (-> UNRECOVERABLE with that code).
+gate0:
+  NOT_CLOSED:        {action: refine_tessellation, factor: 1.5}
+  ILLEGAL_TRIANGLES: {action: refine_tessellation, factor: 1.5}
+  # FEATURE_TOO_SMALL: design issue -> no auto-correction (never change design parameters)

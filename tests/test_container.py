@@ -40,3 +40,13 @@ def test_script_has_preamble(tmp_path, monkeypatch):
     text = r.script_path.read_text()
     assert text.startswith("#!/bin/bash") and f"source {BASHRC}" in text
     assert text.rstrip().endswith("blockMesh") and r.log_path == tmp_path / "log.blockMesh"
+
+
+def test_logs_never_overwritten(tmp_path, monkeypatch):
+    import subprocess
+
+    class R:
+        returncode = 0
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: R())
+    logs = [run_script(tmp_path, "true", "x").log_path.name for _ in range(3)]
+    assert logs == ["log.x", "log.x.1", "log.x.2"]
