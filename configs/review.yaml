@@ -1,0 +1,10 @@
+# Tier 3 review (PLAN.md Phase 6). Fixed label vocabulary: every human decision
+# carries exactly one label; labels are supervised training data (Phase 9).
+labels:
+  - ok_false_alarm       # result is fine, the gate was too strict for this case
+  - mesh_too_coarse
+  - separated_flow
+  - geometry_artifact
+  - not_converged
+  - reference_wrong      # the VSPAERO reference, not the CFD, is wrong
+  - other                # requires --note

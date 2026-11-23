@@ -190,6 +190,17 @@ class GatesConfig(_Strict):
     gate3: Gate3
 
 
+class ReviewConfig(_Strict):
+    """Tier 3 review: fixed label vocabulary (configs/review.yaml)."""
+    labels: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _unique(self):
+        if len(self.labels) != len(set(self.labels)):
+            raise ValueError("duplicate review labels")
+        return self
+
+
 def _load(path: Path | str) -> dict:
     with open(path) as fh:
         return yaml.safe_load(fh)
@@ -201,3 +212,7 @@ def load_study(path: Path | str) -> StudyConfig:
 
 def load_gates(path: Path | str) -> GatesConfig:
     return GatesConfig.model_validate(_load(path))
+
+
+def load_review(path: Path | str) -> ReviewConfig:
+    return ReviewConfig.model_validate(_load(path))

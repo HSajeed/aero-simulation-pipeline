@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ d.run.id }} report</title>
+<style>
+:root { --bg:#fff; --fg:#1d232b; --muted:#5d6875; --line:#d9dee4; --card:#f5f7f9;
+        --pass:#1f7a45; --fail:#b3263a; --warn:#8a6d00; --flag:#b35c00; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#14181d; --fg:#e3e7ec; --muted:#9aa5b1; --line:#2c333b; --card:#1c2228;
+          --pass:#5fcf8c; --fail:#ff7a8a; --warn:#e8c547; --flag:#ffaa55; }
+  img { background:#fff; border-radius:4px; }
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:24px 16px 48px; background:var(--bg); color:var(--fg);
+       font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width:960px; margin:0 auto; }
+h1 { font-size:22px; margin:0 0 4px; }
+h2 { font-size:16px; margin:28px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
+h3 { font-size:14px; margin:18px 0 6px; }
+.muted { color:var(--muted); }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-weight:600; font-size:12px;
+         border:1px solid currentColor; }
+.s-CHECKS_PASS, .s-ACCEPTED { color:var(--pass); }
+.s-FLAGGED { color:var(--flag); }
+.s-REJECTED, .s-UNRECOVERABLE, .s-GEOM_FAIL, .s-MESH_FAIL, .s-PILOT_FAIL, .s-PROD_FAIL { color:var(--fail); }
+.box { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:10px 14px; margin:10px 0; }
+.box.flag { border-left:4px solid var(--flag); }
+.wrap { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums; }
+th, td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; }
+td.num { text-align:right; }
+.pass { color:var(--pass); } .fail { color:var(--fail); font-weight:600; } .warn { color:var(--warn); }
+img { max-width:100%; height:auto; display:block; margin:8px 0; }
+code { font-size:12px; }
+details summary { cursor:pointer; color:var(--muted); margin:6px 0; }
+footer { margin-top:36px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>{{ d.run.id }} <span class="badge s-{{ d.run.status }}">{{ d.run.status }}</span></h1>
+<div class="muted">study <b>{{ d.run.study }}</b> · created {{ d.run.created_at }} · updated {{ d.run.updated_at }}</div>
+
+{% if codes %}
+<div class="box flag">
+  <b>{% if d.run.status in ("FLAGGED", "ACCEPTED", "REJECTED") %}Flag reasons{% else %}Failure code{% endif %}:</b>
+  {% for c in codes %}<code>{{ c }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+  {% if failed %}
+  <div class="wrap"><table>
+    <tr><th>gate</th><th>check</th><th class="num">value</th><th class="num">threshold</th><th class="num">exceedance</th></tr>
+    {% for m in failed %}
+    <tr><td>{{ m.gate }}</td><td>{{ m.metric }}</td><td class="num">{{ m.value|fmt }}</td>
+        <td class="num">{{ m.threshold|fmt }}</td>
+        <td class="num">{% if m.exceedance is not none %}{{ m.exceedance|fmt(3) }}×{% else %}—{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if d.reviews %}
+<h2>Human review</h2>
+<div class="wrap"><table>
+  <tr><th>time</th><th>decision</th><th>label</th><th>reviewer</th><th>note</th></tr>
+  {% for rv in d.reviews %}
+  <tr><td>{{ rv.time }}</td><td>{{ rv.decision }}</td><td><code>{{ rv.label }}</code></td>
+      <td>{{ rv.reviewer or "—" }}</td><td>{{ rv.note or "" }}</td></tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+
+<h2>Design parameters</h2>
+<div class="wrap"><table>
+  <tr>{% for k in d.run.params %}<th>{{ k }}</th>{% endfor %}</tr>
+  <tr>{% for v in d.run.params.values() %}<td class="num">{{ v|fmt }}</td>{% endfor %}</tr>
+</table></div>
+{% if d.geometry %}
+<h3>Reference values (half model)</h3>
+<div class="wrap"><table>
+  <tr><th>Sref full (m²)</th><th>Aref half (m²)</th><th>span (m)</th><th>MAC (m)</th><th>x_ref (m)</th><th>tip chord (m)</th><th>STL area (m²)</th><th>triangles</th></tr>
+  <tr><td class="num">{{ d.geometry.sref_full|fmt }}</td><td class="num">{{ d.geometry.sref_half|fmt }}</td>
+      <td class="num">{{ d.geometry.span|fmt }}</td><td class="num">{{ d.geometry.mac|fmt }}</td>
+      <td class="num">{{ d.geometry.x_ref|fmt }}</td><td class="num">{{ d.geometry.tip_chord|fmt }}</td>
+      <td class="num">{{ d.geometry.stl_area|fmt }}</td><td class="num">{{ d.geometry.n_triangles|fmt }}</td></tr>
+</table></div>
+{% endif %}
+
+<h2>Results</h2>
+{% if result_rows %}
+<div class="wrap"><table>
+  <tr><th>α (°)</th><th class="num">CL</th><th class="num">CL VSPAERO</th><th class="num">|ΔCL| / max(|CL<sub>ref</sub>|, floor)</th>
+      <th class="num">CD*</th><th class="num">Cm</th><th class="num">std CL</th><th class="num">mass imbalance</th>
+      <th class="num">iterations</th><th>converged</th><th class="num">wall time (s)</th></tr>
+  {% for row in result_rows %}
+  <tr><td>{{ row.alpha|fmt }}</td><td class="num">{{ row.r.get("CL")|fmt }}</td><td class="num">{{ row.ref.get("CL")|fmt }}</td>
+      <td class="num">{{ row.diff|fmt(3) }}</td><td class="num">{{ row.r.get("CD")|fmt }}</td><td class="num">{{ row.r.get("Cm")|fmt }}</td>
+      <td class="num">{{ row.r.get("cl_std")|fmt(2) }}</td><td class="num">{{ row.r.get("mass_imbalance")|fmt(2) }}</td>
+      <td class="num">{{ row.r.get("iterations")|fmt }}</td><td>{{ row.r.get("converged")|fmt }}</td>
+      <td class="num">{{ row.r.get("wall_time")|fmt(3) }}</td></tr>
+  {% endfor %}
+</table></div>
+<p class="muted">* Slip walls, laminar with small ν: CD is numerical drag, not physical drag.
+VSPAERO reference models the wing only (no fuselage lift or moment).
+CL/CD/Cm = mean over the last {{ gates_cfg.gate3.coeff_std_window|fmt }} iterations of each α.</p>
+{% else %}
+<p class="muted">No results yet (run stopped at {{ d.run.status }}).</p>
+{% endif %}
+{% if figs.cfd_vs_ref %}<img alt="CL: CFD vs VSPAERO" src="data:image/png;base64,{{ figs.cfd_vs_ref }}">{% endif %}
+
+{% if figs.residuals or figs.coefficients %}
+<h2>Convergence</h2>
+{% if figs.residuals %}<img alt="Residual history" src="data:image/png;base64,{{ figs.residuals }}">{% endif %}
+{% if figs.coefficients %}<img alt="CL and CD history" src="data:image/png;base64,{{ figs.coefficients }}">{% endif %}
+{% endif %}
+
+<h2>Gate metrics vs thresholds</h2>
+{% if figs.margins %}<img alt="Gate margins" src="data:image/png;base64,{{ figs.margins }}">{% endif %}
+{% for g in d.gates %}
+<h3>{{ g.title }} <span class="muted">(attempt {{ g.latest.attempt }}, {{ g.latest.time }})</span></h3>
+<div class="wrap"><table>
+  <tr><th>metric</th><th class="num">value</th><th class="num">threshold</th><th>result</th></tr>
+  {% for m in g.latest.metrics %}
+  <tr><td>{{ m.metric }}</td><td class="num">{{ m.value|fmt }}</td><td class="num">{{ m.threshold|fmt }}</td>
+      <td>{% if m.severity == "warn" %}<span class="warn">info</span>{% elif m.pass %}<span class="pass">pass</span>{% else %}<span class="fail">FAIL</span>{% endif %}</td></tr>
+  {% endfor %}
+</table></div>
+{% if g.earlier %}
+<details><summary>{{ g.earlier|length }} earlier evaluation(s)</summary>
+{% for b in g.earlier %}
+<div class="muted">attempt {{ b.attempt }}, {{ b.time }}: failed:
+  {% set fl = b.metrics|selectattr("severity", "equalto", "gate")|rejectattr("pass")|list %}
+  {% if fl %}{% for m in fl %}<code>{{ m.metric }}={{ m.value|fmt }}</code> (limit {{ m.threshold|fmt }}){% if not loop.last %}, {% endif %}{% endfor %}{% else %}none{% endif %}
+</div>
+{% endfor %}
+</details>
+{% endif %}
+{% endfor %}
+
+<h2>Automatic corrections</h2>
+{% if d.corrections %}
+<div class="wrap"><table>
+  <tr><th>#</th><th>gate</th><th>failure code</th><th>action</th><th>parameter</th><th>old</th><th>new</th><th>time</th></tr>
+  {% for c in d.corrections %}
+  <tr><td>{{ c.attempt }}</td><td>{{ c.gate }}</td><td><code>{{ c.code }}</code></td><td>{{ c.action }}</td>
+      <td><code>{{ c.param }}</code></td><td><code>{{ c.old }}</code></td><td><code>{{ c.new }}</code></td><td>{{ c.created_at }}</td></tr>
+  {% endfor %}
+</table></div>
+{% else %}
+<p class="muted">None.</p>
+{% endif %}
+
+<footer>
+Generated {{ generated }} from <code>{{ db_file }}</code>. All numbers are read from the run database;
+figures are for review only and no gate decides on them.
+</footer>
+</main>
+</body>
+</html>

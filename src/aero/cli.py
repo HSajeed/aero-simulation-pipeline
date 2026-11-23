@@ -10,7 +10,7 @@ import typer
 import yaml
 
 from aero import db
-from aero.config import StudyConfig, load_gates, load_study
+from aero.config import StudyConfig, load_gates, load_review, load_study
 from aero.runner import STAGE_NAMES, Runner, db_path, init_study
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -19,6 +19,10 @@ RunsDir = typer.Option(Path("runs"), "--runs-dir", help="Runs root (DB at <runs-
 GatesOpt = typer.Option(Path("configs/gates.yaml"), "--gates", help="Gates config")
 CorrOpt = typer.Option(Path("configs/corrections.yaml"), "--corrections",
                        help="Correction rules")
+ReviewOpt = typer.Option(Path("configs/review.yaml"), "--review-config", help="Review labels")
+
+review_app = typer.Typer(no_args_is_help=True, help="Tier 3 human review of FLAGGED runs.")
+app.add_typer(review_app, name="review")
 
 
 def impls() -> dict:
@@ -102,3 +106,84 @@ def doctor(engine: str = typer.Option("podman", "--engine"), runs_dir: Path = Ru
         typer.echo(f"[{'ok' if ok else 'FAIL':>4}] {name:<18} {detail}")
     if not all(ok for _, ok, _ in rows):
         raise typer.Exit(1)
+
+
+# ------------------------------------------------------------------ reports
+def _write_reports(con, runs_dir: Path, ids: list[str], gates: Path) -> list[Path]:
+    from aero.report.html import write_report
+    g = load_gates(gates).model_dump(mode="json")
+    return [write_report(con, runs_dir, rid, g) for rid in ids]
+
+
+@app.command()
+def report(study: str, run_id: Optional[str] = typer.Option(None, "--run"),
+           runs_dir: Path = RunsDir, gates: Path = GatesOpt):
+    """Write the self-contained HTML report of each run (from the DB)."""
+    con = db.connect(db_path(runs_dir))
+    _study_cfg(con, study)
+    ids = [run_id] if run_id else [r["id"] for r in db.list_runs(con, study)]
+    for p in _write_reports(con, runs_dir, ids, gates):
+        typer.echo(str(p))
+
+
+# ------------------------------------------------------------------- review
+@review_app.command("list")
+def review_list(study: str, runs_dir: Path = RunsDir, gates: Path = GatesOpt):
+    """FLAGGED runs of a study, most severe first (violations, check priority, exceedance)."""
+    from aero.review import queue
+    con = db.connect(db_path(runs_dir))
+    _study_cfg(con, study)
+    entries = queue.flagged(con, study, load_gates(gates).model_dump(mode="json")["gate3"])
+    if not entries:
+        typer.echo(f"no FLAGGED runs in '{study}'")
+        return
+    typer.echo(f"{'#':>2}  {'run':<16}{'viol':>4}  {'worst check':<20}{'exceed':>8}  reasons")
+    for i, e in enumerate(entries, 1):
+        ex = "-" if e.exceedance is None else ("inf" if e.exceedance == float("inf")
+                                               else f"{e.exceedance:.2f}x")
+        typer.echo(f"{i:>2}  {e.run_id:<16}{e.n_violations:>4}  {e.top_check:<20}{ex:>8}  "
+                   f"{','.join(e.codes)}")
+    typer.echo(f"{len(entries)} flagged")
+
+
+@review_app.command("open")
+def review_open(run_id: str, runs_dir: Path = RunsDir, gates: Path = GatesOpt):
+    """(Re)write a run's report from the DB and print its path."""
+    con = db.connect(db_path(runs_dir))
+    try:
+        db.get_run(con, run_id)
+    except KeyError:
+        typer.echo(f"unknown run: {run_id}", err=True)
+        raise typer.Exit(2)
+    typer.echo(str(_write_reports(con, runs_dir, [run_id], gates)[0]))
+
+
+@review_app.command("decide")
+def review_decide(run_id: str,
+                  accept: bool = typer.Option(False, "--accept"),
+                  reject: bool = typer.Option(False, "--reject"),
+                  label: str = typer.Option(..., "--label", help="from configs/review.yaml"),
+                  note: Optional[str] = typer.Option(None, "--note"),
+                  reviewer: Optional[str] = typer.Option(None, "--reviewer",
+                                                         help="default: login name"),
+                  runs_dir: Path = RunsDir, gates: Path = GatesOpt,
+                  review_config: Path = ReviewOpt):
+    """Accept or reject a FLAGGED run with a label (stored in the reviews table)."""
+    from aero.review import queue
+    from aero.runner import run_dir, write_status_mirror
+    if accept == reject:
+        typer.echo("give exactly one of --accept / --reject", err=True)
+        raise typer.Exit(2)
+    con = db.connect(db_path(runs_dir))
+    try:
+        row = queue.decide(con, run_id, accept, label, note, load_review(review_config).labels,
+                           reviewer)
+    except KeyError:
+        typer.echo(f"unknown run: {run_id}", err=True)
+        raise typer.Exit(2)
+    except queue.ReviewError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(2)
+    write_status_mirror(run_dir(runs_dir, row["study"], run_id), row)
+    path = _write_reports(con, runs_dir, [run_id], gates)[0]
+    typer.echo(f"{run_id}: {row['status']} ({label}); report {path}")
