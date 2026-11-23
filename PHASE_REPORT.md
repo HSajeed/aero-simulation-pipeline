@@ -214,7 +214,8 @@ mass imbalance <= 1.1e-8; CD 0.0058–0.019 (numerical drag).
 - Review CLI end to end: verified by tests on a synthetic DB (list ordering, open, decide, bad/missing
   label, double decision, non-flagged refusal, status mirror, report shows the decision).
 - **Not met: "review 10 flagged runs end to end".** 0 of 19 converged runs (baseline + harsh) were
-  flagged, so there is nothing real to review. Pending human decision (decisions.md, P6-1).
+  flagged, so there is nothing real to review. Pending human decision (decisions.md, P6-1); planned
+  route: high-AoA study (P6-5, pending run).
 
 ## Status
 Phases 0–6 built; the Phase 6 real-run review acceptance is pending (decisions.md, "Pending decisions").
