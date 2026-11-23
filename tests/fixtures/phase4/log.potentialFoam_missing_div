@@ -1,0 +1,60 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _45e7c4a0-20241224 OPENFOAM=2412 version=2412
+Arch   : "LSB;label=32;scalar=64"
+Exec   : potentialFoam -writep
+Date   : Nov 23 2026
+Time   : 15:59:37
+Host   : 1f8f5db54bad
+PID    : 215
+I/O    : uncollated
+Case   : /case
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+
+potentialFlow: Operating solver in PISO mode
+
+Reading velocity field U
+
+Constructing pressure field p
+
+Constructing velocity potential field Phi
+
+No MRF models present
+
+
+Calculating potential flow
+GAMG:  Solving for Phi, Initial residual = 1, Final residual = 0.00414737871, No Iterations 2
+GAMG:  Solving for Phi, Initial residual = 0.0024425116, Final residual = 1.678812845e-05, No Iterations 4
+GAMG:  Solving for Phi, Initial residual = 0.0004081026968, Final residual = 2.035918582e-06, No Iterations 4
+GAMG:  Solving for Phi, Initial residual = 0.000151408757, Final residual = 8.284246676e-07, No Iterations 4
+Continuity error = 4.51324817e-07
+Interpolated velocity error = 0.0002777993307
+
+Calculating approximate pressure field
+
+
+--> FOAM FATAL IO ERROR: (openfoam-2412)
+Entry 'div(div(phi,U))' not found in dictionary "system/fvSchemes/divSchemes"
+
+
+file: system/fvSchemes/divSchemes at line 8 to 10.
+
+    From const Foam::entry& Foam::dictionary::lookupEntry(const Foam::word&, Foam::keyType::option) const
+    in file db/dictionary/dictionary.C at line 363.
+
+FOAM exiting
+

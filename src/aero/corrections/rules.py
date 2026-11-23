@@ -5,6 +5,7 @@ A rule is one action, or a list of actions used in order by attempt number
   refine_tessellation {factor}   scale every tessellation count
   add   {param, by}              add (element-wise for lists), ints stay >= 0
   scale {param, by}              multiply
+  set   {param, value}           set a value
 Only numerical settings; the runner refuses anything else. A code without a
 rule -> no correction (UNRECOVERABLE with that code).
 """
@@ -42,6 +43,11 @@ def propose(rules: dict, gate: str, code: str | None, settings: dict,
         f = float(rule["factor"])
         new = {k: int(round(v * f)) for k, v in settings["tessellation"].items()}
         return Change(f"refine_tessellation x{f}", "tessellation", new)
+    if action == "set":
+        param, new = rule["param"], rule["value"]
+        if get_path(settings, param) == new:
+            return None
+        return Change(f"set {param} {new}", param, new)
     if action in ("add", "scale"):
         param, by = rule["param"], rule["by"]
         old = get_path(settings, param)

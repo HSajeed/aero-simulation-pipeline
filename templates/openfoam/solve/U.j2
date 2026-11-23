@@ -1,0 +1,11 @@
+{% set cls = "volVectorField" %}{% include "header.j2" %}
+// Physics v1: slip walls, symmetryPlane at y=0, freestream farfield (alpha via U vector)
+dimensions [0 1 -1 0 0 0 0];
+internalField uniform ({{ U|join(' ') }});
+boundaryField
+{
+    farfield { type freestreamVelocity; freestreamValue uniform ({{ U|join(' ') }}); value uniform ({{ U|join(' ') }}); }
+    wing     { type slip; }
+    fuselage { type slip; }
+    symmetry { type symmetryPlane; }
+}

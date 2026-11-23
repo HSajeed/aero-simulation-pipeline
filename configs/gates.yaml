@@ -22,6 +22,8 @@ gate2:                          # pilot (PLAN.md Phase 4)
   min_residual_drop_orders: 2
   max_cl_change: 0.05           # relative, over the window
   cl_change_window: 100
+  cl_change_floor: 0.05         # confirmed 2026-11-23: |CL| floor for the relative change
+  max_abs_coeff: 2.0            # confirmed 2026-11-23: "forces bounded" limit on |Cl|,|Cd|,|Cm|
 
 gate3:                          # plausibility (PLAN.md Phase 5)
   max_cl_rel_diff_vspaero: 0.25

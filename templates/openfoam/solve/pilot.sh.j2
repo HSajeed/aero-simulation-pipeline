@@ -1,0 +1,14 @@
+# pilot (tag {{ tag }}): restart from iteration 0 on alpha = {{ alpha }} deg
+foamListTimes -rm > /dev/null 2>&1 || true
+{% if s.potential_init %}
+potentialFoam -writep > log.potentialFoam.{{ tag }} 2>&1
+{% endif %}
+{% if s.upwind_startup_iters > 0 and s.upwind_startup_iters < end_time %}
+foamDictionary system/controlDict -entry endTime -set {{ s.upwind_startup_iters }} > /dev/null
+simpleFoam > log.simpleFoam.{{ tag }}.s1 2>&1
+foamDictionary system/fvSchemes -entry "divSchemes/div(phi,U)" -set "bounded Gauss {{ final_div }}" > /dev/null
+foamDictionary system/controlDict -entry endTime -set {{ end_time }} > /dev/null
+simpleFoam > log.simpleFoam.{{ tag }}.s2 2>&1
+{% else %}
+simpleFoam > log.simpleFoam.{{ tag }} 2>&1
+{% endif %}

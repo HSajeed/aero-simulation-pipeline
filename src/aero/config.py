@@ -106,6 +106,10 @@ class SolverSettings(_Strict):
     residual_target: float = Field(gt=0)
     relax_U: float = Field(gt=0, le=1)
     relax_p: float = Field(gt=0, le=1)
+    n_non_orth_correctors: int = Field(1, ge=0)
+    div_scheme_U: Literal["linearUpwind", "upwind"] = "linearUpwind"
+    upwind_startup_iters: int = Field(0, ge=0)   # first-order start-up, then div_scheme_U
+    potential_init: bool = True                    # potentialFoam -writep before the pilot
 
 
 class StudyConfig(_Strict):
@@ -164,6 +168,8 @@ class Gate2(_Strict):
     min_residual_drop_orders: float
     max_cl_change: float
     cl_change_window: int
+    cl_change_floor: float | None = None   # denominator floor for the relative CL change
+    max_abs_coeff: float | None = None     # "forces bounded": |Cl|,|Cd|,|Cm| limit
 
 
 class Gate3(_Strict):

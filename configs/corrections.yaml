@@ -26,3 +26,20 @@ gate1:
   SKEWNESS_HIGH: *quality
   NEGATIVE_VOLUMES: *quality
   # SHM_FAILED, CHECKMESH_FAILED, OPEN_BOUNDARY: no auto-correction
+
+gate2:
+  SOLVER_CRASHED: &diverge              # PLAN: relaxation, first-order start-up, non-orth correctors
+    - {action: scale, param: solver.relax_U,               by: 0.7}
+    - {action: set,   param: solver.upwind_startup_iters,  value: 100}
+    - {action: add,   param: solver.n_non_orth_correctors, by: 1}
+  NAN_DETECTED: *diverge
+  FORCES_UNBOUNDED: *diverge
+  RESIDUAL_DROP_LOW: &slow
+    - {action: add, param: solver.pilot_iterations,      by: 200}
+    - {action: add, param: solver.n_non_orth_correctors, by: 1}
+    - {action: add, param: solver.pilot_iterations,      by: 200}
+  CL_NOT_SETTLED: *slow
+  POTENTIAL_INIT_FAILED:
+    - {action: set, param: solver.potential_init, value: false}
+  # CASE_SETUP_ERROR (bad/missing BC etc.): never auto-fixed (physics -> human)
+  # MISSING_OUTPUT, UNDECIDED_THRESHOLD: no auto-correction

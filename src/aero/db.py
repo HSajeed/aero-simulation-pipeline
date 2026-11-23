@@ -101,6 +101,19 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (run, source, alpha)
     );
     """,
+    # v3: per-iteration solver history (residuals + coefficients)
+    """
+    CREATE TABLE history (
+        run TEXT NOT NULL REFERENCES runs(id),
+        phase TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        alpha REAL NOT NULL,
+        iteration INTEGER NOT NULL,
+        Ux REAL, Uy REAL, Uz REAL, p REAL,
+        Cl REAL, Cd REAL, Cm REAL,
+        PRIMARY KEY (run, phase, tag, iteration)
+    );
+    """,
 ]
 
 
@@ -206,6 +219,14 @@ def put_geometry(con, run_id: str, g: dict[str, Any]) -> None:
         "INSERT OR REPLACE INTO geometry (run, %s, data, created_at) VALUES (?, %s, ?, ?)"
         % (", ".join(keys), ", ".join("?" * len(keys))),
         (run_id, *(g.get(k) for k in keys), json.dumps(g), now()))
+
+
+def put_history(con, run_id: str, phase: str, tag: str, alpha: float,
+                rows: list[dict[str, Any]]) -> None:
+    keys = ("Ux", "Uy", "Uz", "p", "Cl", "Cd", "Cm")
+    con.executemany(
+        "INSERT OR REPLACE INTO history VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [(run_id, phase, tag, alpha, r["iteration"], *(r.get(k) for k in keys)) for r in rows])
 
 
 def clear_reference(con, run_id: str, source: str) -> None:

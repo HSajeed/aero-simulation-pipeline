@@ -84,3 +84,65 @@ def parse_snappy(text: str) -> dict:
         "mesh_time_s": _num(r"Finished meshing in = ([\d.eE+-]+) s", text),
         "fatal": "FOAM FATAL" in text,
     }
+
+
+def parse_dat(text: str) -> list[dict]:
+    """postProcessing .dat (header line '# Time ...', tab separated) -> rows.
+    Numeric cells become float (nan/inf kept as float); others stay strings."""
+    header, rows = None, []
+    for ln in text.splitlines():
+        if ln.startswith("#"):
+            cols = ln[1:].split()
+            if cols and cols[0] == "Time":
+                header = cols
+            continue
+        if header is None or not ln.strip():
+            continue
+        row = {}
+        for k, v in zip(header, ln.split()):
+            try:
+                row[k] = float(v)
+            except ValueError:
+                row[k] = v
+        rows.append(row)
+    return rows
+
+
+def read_function_object(case, name: str, filename: str) -> list[dict]:
+    """All rows of postProcessing/<name>/<startTime>/<filename>*.dat, ordered by
+    Time; a later restart overrides overlapping times."""
+    from pathlib import Path
+    base = Path(case) / "postProcessing" / name
+    by_time: dict[float, dict] = {}
+    if not base.is_dir():
+        return []
+    starts = sorted((d for d in base.iterdir() if d.is_dir()), key=lambda d: float(d.name))
+    for d in starts:
+        for f in sorted(d.glob(f"{filename}*.dat")):
+            for r in parse_dat(f.read_text()):
+                if isinstance(r.get("Time"), float):
+                    by_time[r["Time"]] = r
+    return [by_time[t] for t in sorted(by_time)]
+
+
+def parse_solver_log(text: str) -> dict:
+    """simpleFoam / potentialFoam log -> crash markers and timing."""
+    times = re.findall(r"^Time = ([\d.eE+-]+)\s*$", text, re.M)
+    exe = re.findall(r"ExecutionTime = ([\d.eE+-]+) s", text)
+    return {
+        "fatal": "FOAM FATAL" in text,
+        "fatal_io": "FOAM FATAL IO ERROR" in text,
+        # a real FPE prints a stack through sigFpe::sigHandler; the startup banner
+        # "trapFpe: Floating point exception trapping enabled" is NOT a crash
+        "fpe": bool(re.search(r"sigFpe::sigHandler|Floating point exception \(core dumped\)",
+                              text)),
+        "nan_residual": bool(re.search(r"Initial residual = -?nan", text, re.I)),
+        "ended": bool(re.search(r"^End\s*$", text, re.M)),
+        "last_time": float(times[-1]) if times else None,
+        "execution_time_s": float(exe[-1]) if exe else None,
+        "n_iterations": len(times),
+        "setup_error": bool(re.search(
+            r"FOAM FATAL (IO )?ERROR.*?(Unknown patchField type|Cannot find patchField entry"
+            r"|keyword .* is undefined|Unknown .*Model|cannot find file|Entry .* not found)",
+            text, re.S)),
+    }

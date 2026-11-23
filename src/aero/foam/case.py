@@ -82,3 +82,47 @@ def write_mesh_case(case: Path, stl: Path, geom: dict, mesh: dict, alphas: list[
     shutil.copy(stl, tri / "body.stl")
     layout["script"] = env.get_template("mesh.sh.j2").render(attempt=attempt_tag)
     return layout
+
+
+SOLVE_FILES = {
+    "0/U": "U.j2", "0/p": "p.j2",
+    "constant/transportProperties": "transportProperties.j2",
+    "constant/turbulenceProperties": "turbulenceProperties.j2",
+    "system/controlDict": "controlDict.j2",
+    "system/fvSchemes": "fvSchemes.j2",
+    "system/fvSolution": "fvSolution.j2",
+}
+DIV = {"linearUpwind": "linearUpwind grad(U)", "upwind": "upwind"}
+
+
+def freestream_dirs(alpha_deg: float) -> tuple[list[float], list[float]]:
+    """(drag_dir, lift_dir) for flow in the x-z plane at angle alpha."""
+    a = math.radians(alpha_deg)
+    return [_r(math.cos(a)), 0.0, _r(math.sin(a))], [_r(-math.sin(a)), 0.0, _r(math.cos(a))]
+
+
+def write_solve_case(case: Path, mesh_case: Path, geom: dict, settings: dict, alpha: float,
+                     tag: str, end_time: int, residual_control: bool,
+                     templates: Path | None = None) -> str:
+    """Write 0/, constant/, system/ for simpleFoam at `alpha`; copy the mesh.
+    Physics comes only from settings['physics'] (v1, Literal-locked) and the
+    templates; numerics from settings['solver']. Returns the pilot script."""
+    fs, s = settings["freestream"], settings["solver"]
+    drag, lift = freestream_dirs(alpha)
+    U = [_r(fs["U_inf"] * drag[0]), 0.0, _r(fs["U_inf"] * drag[2])]
+    first_div = "upwind" if s["upwind_startup_iters"] > 0 else s["div_scheme_U"]
+    ctx = {"U": U, "nu": fs["nu"], "rho_inf": fs["rho_inf"], "U_inf": fs["U_inf"],
+           "cofr": [_r(geom["x_ref"]), 0.0, 0.0], "lift_dir": lift, "drag_dir": drag,
+           "l_ref": _r(geom["mac"]), "a_ref": _r(geom["sref_half"]),
+           "div_u": DIV[first_div], "final_div": DIV[s["div_scheme_U"]],
+           "end_time": end_time, "residual_control": residual_control, "s": s,
+           "alpha": alpha, "tag": tag}
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(templates or TEMPLATES / "solve"),
+                             undefined=jinja2.StrictUndefined, keep_trailing_newline=True)
+    for rel, tpl in SOLVE_FILES.items():
+        p = case / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(env.get_template(tpl).render(object=p.name, **ctx))
+    shutil.copytree(mesh_case / "constant" / "polyMesh", case / "constant" / "polyMesh",
+                    dirs_exist_ok=True)
+    return env.get_template("pilot.sh.j2").render(**ctx)

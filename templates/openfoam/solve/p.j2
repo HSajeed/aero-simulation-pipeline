@@ -1,0 +1,10 @@
+{% set cls = "volScalarField" %}{% include "header.j2" %}
+dimensions [0 2 -2 0 0 0 0];
+internalField uniform 0;
+boundaryField
+{
+    farfield { type freestreamPressure; freestreamValue uniform 0; value uniform 0; }
+    wing     { type zeroGradient; }
+    fuselage { type zeroGradient; }
+    symmetry { type symmetryPlane; }
+}

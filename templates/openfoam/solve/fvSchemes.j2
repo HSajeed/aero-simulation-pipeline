@@ -1,0 +1,13 @@
+{% include "header.j2" %}
+ddtSchemes      { default steadyState; }
+gradSchemes     { default Gauss linear; grad(U) cellLimited Gauss linear 1; }
+divSchemes
+{
+    default none;
+    div(phi,U) bounded Gauss {{ div_u }};
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
+    div(div(phi,U)) Gauss linear;   // potentialFoam -writep
+}
+laplacianSchemes     { default Gauss linear limited corrected 0.5; }
+interpolationSchemes { default linear; }
+snGradSchemes        { default limited corrected 0.5; }

@@ -88,3 +88,23 @@ def test_mesh_stage_real(tmp_path, study_cfg):
     assert m["snapped_area_wing"] > 0 and m["snapped_area_fuselage"] > 0
     assert (tmp_path / "t/t-0001/mesh/log.checkMesh.a0").exists()
     assert (tmp_path / "t/t-0001/mesh/settings_used.a0.json").exists()
+
+
+def test_broken_bc_caught_not_fixed(tmp_path, study_cfg, monkeypatch):
+    """PLAN Phase 4 acceptance: a bad BC is caught and NOT auto-fixed."""
+    import shutil as sh
+    from aero.foam import case as case_mod, pilot_stage
+    from aero.foam.mesh_stage import MeshStage
+    tpl = tmp_path / "broken_templates"
+    sh.copytree(case_mod.TEMPLATES / "solve", tpl)
+    u = (tpl / "U.j2").read_text()
+    (tpl / "U.j2").write_text("\n".join(l for l in u.splitlines() if "farfield" not in l))
+    monkeypatch.setattr(pilot_stage, "TEMPLATES", tpl)
+    runs = tmp_path / "runs"
+    r = _one_run_study(runs, study_cfg, GOOD)
+    r.impls.update(mesh=MeshStage(), pilot=pilot_stage.PilotStage())
+    assert r.run_one("t-0001") == Status.UNRECOVERABLE
+    con = db.connect(db_path(runs))
+    assert db.get_run(con, "t-0001")["failure_code"] == "CASE_SETUP_ERROR"
+    assert db.corrections_for(con, "t-0001", "gate2") == []          # nothing auto-changed
+    assert "farfield" not in (runs / "t/t-0001/case/0/U").read_text()  # BC left as written

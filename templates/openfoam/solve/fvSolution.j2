@@ -1,0 +1,21 @@
+{% include "header.j2" %}
+solvers
+{
+    Phi { solver GAMG; smoother DIC; tolerance 1e-06; relTol 0.01; }
+    p   { solver GAMG; smoother GaussSeidel; tolerance 1e-07; relTol 0.1; }
+    U   { solver smoothSolver; smoother symGaussSeidel; tolerance 1e-08; relTol 0.1; }
+}
+potentialFlow { nNonOrthogonalCorrectors 3; }
+SIMPLE
+{
+    nNonOrthogonalCorrectors {{ s.n_non_orth_correctors }};
+    consistent no;
+{% if residual_control %}
+    residualControl { p {{ s.residual_target }}; U {{ s.residual_target }}; }
+{% endif %}
+}
+relaxationFactors
+{
+    fields    { p {{ s.relax_p }}; }
+    equations { U {{ s.relax_U }}; }
+}
