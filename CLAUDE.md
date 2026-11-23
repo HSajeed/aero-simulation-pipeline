@@ -86,7 +86,7 @@ our own code will do.
 
 ## Run status state machine
 PENDING → GEOM_OK | GEOM_FAIL → MESH_OK | MESH_FAIL → PILOT_OK | PILOT_FAIL
-→ PROD_DONE → CHECKS_PASS | FLAGGED → (human) ACCEPTED | REJECTED
+→ PROD_DONE | PROD_FAIL → CHECKS_PASS | FLAGGED → (human) ACCEPTED | REJECTED
 Any *_FAIL after retry budget → UNRECOVERABLE.
 FLAGGED runs wait in the review queue; the pipeline never auto-accepts them.
 

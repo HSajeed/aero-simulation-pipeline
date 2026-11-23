@@ -1,0 +1,47 @@
+# Baseline study. Physics, ranges, mesh and solver values confirmed 2026-11-23.
+name: baseline
+
+physics:              # v1, fixed (CLAUDE.md). Only these values validate.
+  solver: simpleFoam
+  flow: incompressible_steady
+  model: laminar
+  wall_bc: slip
+  symmetry: half_model_y0
+  farfield: freestream
+
+parameters:           # confirmed 2026-11-23
+  - {name: span,              low: 8.0,  high: 14.0, unit: m}     # full span
+  - {name: sweep_le,          low: 0.0,  high: 10.0, unit: deg}
+  - {name: taper,             low: 0.25, high: 1.0,  unit: "-"}   # c_tip / c_root
+  - {name: twist_tip,         low: 0.0,  high: 4.0,  unit: deg}   # washout, positive = nose down
+  - {name: fuselage_fineness, low: 6.0,  high: 10.0, unit: "-"}   # length / diameter
+
+sampling: {method: lhs, n: 10, seed: 42}
+
+geometry:             # fixed values (smoke-test geometry)
+  root_chord: 2.0         # m
+  fuselage_length: 10.0   # m
+
+freestream:           # confirmed 2026-11-23
+  U_inf: 10.0         # m/s
+  nu: 1.0e-5          # m^2/s ("small viscosity" inviscid approximation)
+  rho_inf: 1.0        # fixed: forceCoeffs rho rhoInf; rhoInf 1
+
+alphas: [0.0, 4.0]    # deg (PLAN.md example)
+
+mesh:                 # numerical; from the Phase 0 smoke run (114k cells, Mesh OK)
+  base_cell_size: 2.5
+  surface_level: [5, 6]
+  feature_level: 6
+  near_body_level: 3
+  n_cells_between_levels: 3
+
+solver:               # numerical
+  pilot_iterations: 300     # PLAN.md
+  max_iterations: 2000      # confirmed
+  residual_target: 1.0e-5   # confirmed
+  relax_U: 0.7              # confirmed
+  relax_p: 0.3              # confirmed
+
+workers: 4            # confirmed: concurrent single-core cases (6 cores / 14 GB)
+container_engine: podman

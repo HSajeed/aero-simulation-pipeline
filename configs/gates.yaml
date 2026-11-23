@@ -1,0 +1,30 @@
+# Gate thresholds. null = NOT DECIDED: gate code must treat an undecided check
+# as not passable (fail / flag), never as a pass.
+max_correction_attempts: 3      # CLAUDE.md rule 3 (validated <= 3)
+
+gate0:                          # geometry / STL
+  require_closed: true
+  max_self_intersections: null  # DECISION NEEDED: Phase 0 STL had 23
+  min_triangle_quality: null    # DECISION NEEDED: Phase 0 STL min was 1e-5
+
+gate1:                          # mesh (PLAN.md Phase 3)
+  max_non_orth: 70
+  max_skewness: 4
+  max_negative_volumes: 0
+  require_closed_boundary: true
+  min_cells: 300000             # confirmed
+  max_cells: 1000000            # confirmed
+  min_wetted_area_ratio: 0.98
+
+gate2:                          # pilot (PLAN.md Phase 4)
+  min_residual_drop_orders: 2
+  max_cl_change: 0.05           # relative, over the window
+  cl_change_window: 100
+
+gate3:                          # plausibility (PLAN.md Phase 5)
+  max_cl_rel_diff_vspaero: 0.25
+  max_mass_imbalance: 1.0e-3    # fraction of inflow
+  coeff_std_window: null        # DECISION NEEDED
+  max_coeff_std: null           # DECISION NEEDED
+  cl_alpha_slope_range: null    # DECISION NEEDED (per rad)
+  min_cd: null                  # DECISION NEEDED (inviscid CD ~ 0)
