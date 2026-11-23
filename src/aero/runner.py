@@ -182,7 +182,8 @@ def load_context(con, runs_dir: Path, run_id: str) -> RunContext:
     row = db.get_run(con, run_id)
     rdir = run_dir(runs_dir, row["study"], run_id)
     frozen = yaml.safe_load((rdir / "config.yaml").read_text())
-    settings = copy.deepcopy(frozen["study"])
+    # re-validate: fills defaults of fields added after the run was frozen
+    settings = StudyConfig.model_validate(frozen["study"]).model_dump(mode="json")
     for c in db.corrections_for(con, run_id):
         set_path(settings, c["param"], json.loads(c["new"]))
     return RunContext(run_id, rdir, frozen["params"], settings)

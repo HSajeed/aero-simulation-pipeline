@@ -1,6 +1,28 @@
-# Automatic corrections: gate -> failure code -> action. Numerical only.
+# Automatic corrections: gate -> failure code -> action, or a list of actions
+# used in order by attempt (last one repeats). Numerical settings only.
 # Codes without an entry are not auto-corrected (-> UNRECOVERABLE with that code).
 gate0:
   NOT_CLOSED:        {action: refine_tessellation, factor: 1.5}
   ILLEGAL_TRIANGLES: {action: refine_tessellation, factor: 1.5}
   # FEATURE_TOO_SMALL: design issue -> no auto-correction (never change design parameters)
+
+gate1:
+  TOO_MANY_CELLS:                       # PLAN: lower farfield/wake refinement first
+    - {action: add,   param: mesh.wake_level,      by: -1}
+    - {action: add,   param: mesh.near_body_level, by: -1}
+    - {action: scale, param: mesh.base_cell_size,  by: 1.25}
+  TOO_FEW_CELLS:
+    - {action: add,   param: mesh.near_body_level, by: 1}
+    - {action: add,   param: mesh.wake_level,      by: 1}
+    - {action: scale, param: mesh.base_cell_size,  by: 0.8}
+  AREA_RATIO_LOW:                       # PLAN: raise surface or feature refinement
+    - {action: add, param: mesh.feature_level,       by: 1}
+    - {action: add, param: mesh.n_feature_snap_iter, by: 10}
+    - {action: add, param: mesh.surface_level,       by: 1}
+  NON_ORTH_HIGH: &quality               # PLAN: snap tolerance / smoothing / nCellsBetweenLevels
+    - {action: add, param: mesh.n_smooth_patch,         by: 2}
+    - {action: add, param: mesh.n_cells_between_levels, by: 1}
+    - {action: add, param: mesh.n_relax_iter,           by: 5}
+  SKEWNESS_HIGH: *quality
+  NEGATIVE_VOLUMES: *quality
+  # SHM_FAILED, CHECKMESH_FAILED, OPEN_BOUNDARY: no auto-correction

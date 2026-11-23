@@ -23,8 +23,9 @@ CorrOpt = typer.Option(Path("configs/corrections.yaml"), "--corrections",
 
 def impls() -> dict:
     """Stage implementations, registered as phases land."""
+    from aero.foam.mesh_stage import MeshStage
     from aero.geom.stage import GeomStage
-    return {"geom": GeomStage()}
+    return {"geom": GeomStage(), "mesh": MeshStage()}
 
 
 def _study_cfg(con, study: str) -> StudyConfig:

@@ -14,7 +14,7 @@ gate1:                          # mesh (PLAN.md Phase 3)
   max_skewness: 4
   max_negative_volumes: 0
   require_closed_boundary: true
-  min_cells: 300000             # confirmed
+  min_cells: 50000              # confirmed 2026-11-23: sanity floor; resolution set by Phase 7 GCI
   max_cells: 1000000            # confirmed
   min_wetted_area_ratio: 0.98
 

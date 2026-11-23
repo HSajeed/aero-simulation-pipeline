@@ -1,0 +1,9 @@
+# mesh stage (tag {{ attempt }}); run inside the OpenFOAM container in /case
+rm -rf /case/constant/polyMesh
+rm -f /case/snapped_wing.stl /case/snapped_fuselage.stl
+blockMesh > log.blockMesh.{{ attempt }} 2>&1
+surfaceFeatureExtract > log.surfaceFeatureExtract.{{ attempt }} 2>&1
+snappyHexMesh -overwrite > log.snappyHexMesh.{{ attempt }} 2>&1
+checkMesh -constant > log.checkMesh.{{ attempt }} 2>&1 || true
+surfaceMeshExtract -constant -patches '(wing)' snapped_wing.stl > log.extract.{{ attempt }} 2>&1
+surfaceMeshExtract -constant -patches '(fuselage)' snapped_fuselage.stl >> log.extract.{{ attempt }} 2>&1

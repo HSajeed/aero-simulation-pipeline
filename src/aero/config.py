@@ -70,12 +70,33 @@ class Tessellation(_Strict):
 
 
 class MeshSettings(_Strict):
-    """Numerical: may be auto-corrected."""
+    """Numerical: may be auto-corrected. Defaults (Phase 3) apply to runs whose
+    frozen config predates a field; the mesh stage writes the effective values
+    to mesh/settings_used.json."""
     base_cell_size: float = Field(gt=0)
     surface_level: tuple[int, int]
     feature_level: int = Field(ge=0)
     near_body_level: int = Field(ge=0)
     n_cells_between_levels: int = Field(ge=1)
+    # domain, in root chords from the body bounding box
+    upstream_chords: float = Field(15.0, ge=15)      # PLAN: >= 15 upstream
+    downstream_chords: float = Field(25.0, ge=25)    # PLAN: >= 25 downstream
+    lateral_chords: float = Field(15.0, gt=0)
+    vertical_chords: float = Field(15.0, gt=0)
+    # wake refinement box behind the wing
+    wake_level: int = Field(3, ge=0)
+    wake_length_chords: float = Field(5.0, gt=0)
+    # feature handling
+    included_angle: float = Field(150.0, gt=0, lt=180)
+    resolve_feature_angle: float = Field(30.0, gt=0, lt=180)
+    # snapping
+    n_smooth_patch: int = Field(3, ge=0)
+    snap_tolerance: float = Field(2.0, gt=0)
+    n_solve_iter: int = Field(50, ge=1)
+    n_relax_iter: int = Field(5, ge=1)
+    n_feature_snap_iter: int = Field(10, ge=1)
+    max_local_cells: int = Field(2_000_000, gt=0)
+    max_global_cells: int = Field(4_000_000, gt=0)
 
 
 class SolverSettings(_Strict):

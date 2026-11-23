@@ -1,0 +1,71 @@
+{% include "header.j2" %}
+castellatedMesh true; snap true; addLayers false;   // v1: no boundary layers
+
+geometry
+{
+    body.stl
+    {
+        type triSurfaceMesh; name body;
+        regions { wing { name wing; } fuselage { name fuselage; } }
+    }
+    nearBody { type searchableBox; min ({{ nb.min|join(' ') }}); max ({{ nb.max|join(' ') }}); }
+{% if m.wake_level > 0 %}
+    wake { type searchableBox; min ({{ wk.min|join(' ') }}); max ({{ wk.max|join(' ') }}); }
+{% endif %}
+}
+
+castellatedMeshControls
+{
+    maxLocalCells {{ m.max_local_cells }}; maxGlobalCells {{ m.max_global_cells }};
+    minRefinementCells 10; maxLoadUnbalance 0.10;
+    nCellsBetweenLevels {{ m.n_cells_between_levels }};
+    // TE, tip and wing-fuselage junction come in as feature edges
+    features ( { file "body.eMesh"; level {{ m.feature_level }}; } );
+    refinementSurfaces
+    {
+        body
+        {
+            level ({{ m.surface_level|join(' ') }});
+            regions
+            {
+                wing     { level ({{ m.surface_level|join(' ') }}); patchInfo { type wall; } }
+                fuselage { level ({{ m.surface_level|join(' ') }}); patchInfo { type wall; } }
+            }
+        }
+    }
+    // high-curvature regions (leading edge) refined up to the max surface level
+    resolveFeatureAngle {{ m.resolve_feature_angle }};
+    refinementRegions
+    {
+        nearBody { mode inside; levels ((1E15 {{ m.near_body_level }})); }
+{% if m.wake_level > 0 %}
+        wake     { mode inside; levels ((1E15 {{ m.wake_level }})); }
+{% endif %}
+    }
+    locationInMesh ({{ loc|join(' ') }});
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch {{ m.n_smooth_patch }}; tolerance {{ m.snap_tolerance }};
+    nSolveIter {{ m.n_solve_iter }}; nRelaxIter {{ m.n_relax_iter }};
+    nFeatureSnapIter {{ m.n_feature_snap_iter }};
+    implicitFeatureSnap false; explicitFeatureSnap true; multiRegionFeatureSnap true;
+}
+
+addLayersControls
+{
+    relativeSizes true; layers {}; expansionRatio 1.0; finalLayerThickness 0.3;
+    minThickness 0.1; nGrow 0; featureAngle 60; nRelaxIter 3;
+    nSmoothSurfaceNormals 1; nSmoothNormals 3; nSmoothThickness 10;
+    maxFaceThicknessRatio 0.5; maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle 90; nBufferCellsNoExtrude 0; nLayerIter 50;
+}
+
+meshQualityControls
+{
+    #includeEtc "caseDicts/mesh/generation/meshQualityDict.cfg"
+}
+
+mergeTolerance 1e-6;

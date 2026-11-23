@@ -88,3 +88,31 @@ def test_vspaero_panel_errors_rejected():
     with pytest.raises(ValueError, match="geometry error"):
         check_log(text)
     check_log("Done\n")   # clean log passes
+
+
+def _write_stl(path, solids):
+    with open(path, "w") as fh:
+        for name, tris in solids.items():
+            fh.write(f"solid {name}\n")
+            for t in tris:
+                fh.write(" facet normal 0 0 0\n  outer loop\n")
+                for v in t:
+                    fh.write(f"   vertex {v[0]} {v[1]} {v[2]}\n")
+                fh.write("  endloop\n endfacet\n")
+            fh.write(f"endsolid {name}\n")
+
+
+def test_label_solids_relabels_dropped_sliver(tmp_path):
+    """Tagged export missing one face of a closed tetrahedron: geometry comes from the
+    single-solid file, the missing face takes an edge-neighbour's label."""
+    from aero.geom.openvsp_build import label_solids, stl_triangles
+    a, b, c, d = (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)
+    faces = [(a, c, b), (a, b, d), (b, c, d), (a, d, c)]
+    _write_stl(tmp_path / "single.stl", {"": faces})
+    _write_stl(tmp_path / "tagged.stl", {"1_FuselageGeom_S_Surf0": [faces[0]],
+                                         "2_WingGeom_S_Surf0": faces[1:3]})   # faces[3] dropped
+    solids, n = label_solids(tmp_path / "single.stl", tmp_path / "tagged.stl", tmp_path / "out.stl")
+    assert solids == ["wing", "fuselage"] and n == 1
+    assert len(stl_triangles(tmp_path / "out.stl")) == 4                  # nothing lost
+    assert len(stl_triangles(tmp_path / "out.stl", "fuselage")) + \
+        len(stl_triangles(tmp_path / "out.stl", "wing")) == 4

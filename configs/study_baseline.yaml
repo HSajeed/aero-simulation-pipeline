@@ -41,6 +41,21 @@ mesh:                 # numerical; from the Phase 0 smoke run (114k cells, Mesh 
   feature_level: 6
   near_body_level: 3
   n_cells_between_levels: 3
+  upstream_chords: 15       # domain, root chords from body bbox (PLAN: >= 15)
+  downstream_chords: 25     # PLAN: >= 25
+  lateral_chords: 15
+  vertical_chords: 15
+  wake_level: 3             # wake refinement box behind the wing
+  wake_length_chords: 5
+  included_angle: 150       # surfaceFeatureExtract
+  resolve_feature_angle: 30
+  n_smooth_patch: 3         # snapControls
+  snap_tolerance: 2.0
+  n_solve_iter: 50
+  n_relax_iter: 5
+  n_feature_snap_iter: 10
+  max_local_cells: 2000000
+  max_global_cells: 4000000
 
 solver:               # numerical
   pilot_iterations: 300     # PLAN.md

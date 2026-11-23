@@ -74,3 +74,17 @@ def test_bad_geometry_tiny_tip_unrecoverable(tmp_path, study_cfg):
     assert db.corrections_for(con, "t-0001") == []        # design is never "healed"
     params = yaml.safe_load((tmp_path / "t/t-0001/config.yaml").read_text())["params"]
     assert params["taper"] == 0.05
+
+
+def test_mesh_stage_real(tmp_path, study_cfg):
+    from aero.foam.mesh_stage import MeshStage
+    r = _one_run_study(tmp_path, study_cfg, GOOD)
+    r.impls["mesh"] = MeshStage()
+    assert r.run_one("t-0001") == Status.MESH_OK
+    con = db.connect(db_path(tmp_path))
+    m = {row["metric"]: row["value"] for row in con.execute(
+        "SELECT metric, value FROM gate_results WHERE gate='gate1'")}
+    assert m["wetted_area_ratio"] >= 0.98 and m["cells_min"] >= 50000
+    assert m["snapped_area_wing"] > 0 and m["snapped_area_fuselage"] > 0
+    assert (tmp_path / "t/t-0001/mesh/log.checkMesh.a0").exists()
+    assert (tmp_path / "t/t-0001/mesh/settings_used.a0.json").exists()

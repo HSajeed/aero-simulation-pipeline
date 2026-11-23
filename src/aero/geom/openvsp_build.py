@@ -10,6 +10,13 @@ Parameter mapping (see configs/study_baseline.yaml):
 Fixed layout: wing root LE at x = 0.35 L, wing z = -0.2 D (low-mid wing),
 NACA 4-series default airfoil (sharp TE). Reference values: trapezoidal
 planform from the centerline, moment reference at 0.25 MAC.
+
+STL: geometry = OpenVSP's single-solid CompGeom export (closed). Its tagged
+exports (multi-solid STL, Cart3D .tri) drop tiny junction slivers (~1e-7 m2)
+and leave the surface open, so they are used only to LABEL triangles: each
+single-solid triangle takes the solid (`wing`/`fuselage`) of the identical
+tagged triangle; unmatched slivers take the label of an edge-sharing
+neighbour (count recorded as stl_relabelled_triangles).
 """
 
 from __future__ import annotations
@@ -86,20 +93,105 @@ def build(params: dict, settings: dict, out_dir: Path) -> dict:
     ref["compgeom_wet_area"] = dict(zip(vsp.GetStringResults(res, "Comp_Name"),
                                         vsp.GetDoubleResults(res, "Wet_Area")))
     ref["compgeom_total_wet_area"] = vsp.GetDoubleResults(res, "Total_Wet_Area")[0]
+    veh = vsp.FindContainer("Vehicle", 0)
+    multi = vsp.FindParm(veh, "MultiSolid", "STLSettings")
+    single_stl, tagged_stl = out_dir / "body_vsp_single.stl", out_dir / "body_vsp_tagged.stl"
+    vsp.SetParmVal(multi, 0.0)
+    vsp.ExportFile(str(single_stl), vsp.SET_SHOWN, vsp.EXPORT_STL)
+    vsp.SetParmVal(multi, 1.0)
+    vsp.ExportFile(str(tagged_stl), vsp.SET_SHOWN, vsp.EXPORT_STL)
+    vsp.SetParmVal(multi, 0.0)
     stl = out_dir / "body.stl"
-    vsp.ExportFile(str(stl), vsp.SET_SHOWN, vsp.EXPORT_STL)
+    solids, relabelled = label_solids(single_stl, tagged_stl, stl)
+    ref["stl_relabelled_triangles"] = relabelled
     tris = stl_triangles(stl)
     ref["n_triangles"] = len(tris)
     ref["stl_area"] = tri_area(tris)
+    ref["stl_solid_area"] = {k: tri_area(stl_triangles(stl, k)) for k in solids}
     ref["stl_bbox"] = [tris.reshape(-1, 3).min(0).tolist(), tris.reshape(-1, 3).max(0).tolist()]
     ref["openvsp_version"] = vsp.GetVSPVersion()
     return ref
 
 
-def stl_triangles(path: Path) -> np.ndarray:
-    """(N,3,3) vertices from an ASCII STL."""
-    verts = [ln.split()[1:4] for ln in Path(path).read_text().splitlines()
-             if ln.lstrip().startswith("vertex")]
+def _solid_name(vsp_name: str) -> str:
+    if "WingGeom" in vsp_name:
+        return "wing"
+    if "FuselageGeom" in vsp_name:
+        return "fuselage"
+    raise ValueError(f"unexpected STL solid {vsp_name!r}")
+
+
+def _vkey(v) -> tuple:
+    return tuple(round(float(x), 9) for x in v)
+
+
+def label_solids(single: Path, tagged: Path, dst: Path, max_relabel: int = 50
+                 ) -> tuple[list[str], int]:
+    """Write dst = triangles of `single`, grouped into solids wing/fuselage
+    using the labels of `tagged`. Returns (solids, n_relabelled)."""
+    tri_label: dict[frozenset, str] = {}
+    edge_label: dict[frozenset, str] = {}
+    cur = None
+    for t, name in _iter_tris(tagged):
+        lab = _solid_name(name)
+        vs = [_vkey(v) for v in t]
+        tri_label[frozenset(vs)] = lab
+        for i in range(3):
+            edge_label.setdefault(frozenset((vs[i], vs[(i + 1) % 3])), lab)
+    groups: dict[str, list[np.ndarray]] = {"wing": [], "fuselage": []}
+    pending = []
+    for t, _ in _iter_tris(single):
+        lab = tri_label.get(frozenset(_vkey(v) for v in t))
+        (groups[lab].append(t) if lab else pending.append(t))
+    for t in pending:                      # slivers missing from the tagged export
+        vs = [_vkey(v) for v in t]
+        labs = [edge_label.get(frozenset((vs[i], vs[(i + 1) % 3]))) for i in range(3)]
+        lab = next((x for x in labs if x), None)
+        if lab is None:
+            raise ValueError("untagged triangle with no tagged neighbour")
+        groups[lab].append(t)
+    if len(pending) > max_relabel:
+        raise ValueError(f"{len(pending)} triangles missing from tagged export (> {max_relabel})")
+    if not groups["wing"] or not groups["fuselage"]:
+        raise ValueError("expected both wing and fuselage triangles")
+    with open(dst, "w") as fh:
+        for k in ("wing", "fuselage"):
+            fh.write(f"solid {k}\n")
+            for t in groups[k]:
+                n = np.cross(t[1] - t[0], t[2] - t[0])
+                nn = np.linalg.norm(n)
+                n = n / nn if nn > 0 else n
+                fh.write(f" facet normal {n[0]:.10e} {n[1]:.10e} {n[2]:.10e}\n  outer loop\n")
+                for v in t:
+                    fh.write(f"   vertex {v[0]:.10e} {v[1]:.10e} {v[2]:.10e}\n")
+                fh.write("  endloop\n endfacet\n")
+            fh.write(f"endsolid {k}\n")
+    return ["wing", "fuselage"], len(pending)
+
+
+def _iter_tris(path: Path):
+    """Yield (3x3 vertex array, solid name) from an ASCII STL."""
+    cur, verts = "", []
+    for ln in Path(path).read_text().splitlines():
+        s = ln.strip()
+        if s.startswith("solid"):
+            cur = s[5:].strip()
+        elif s.startswith("vertex"):
+            verts.append([float(x) for x in s.split()[1:4]])
+            if len(verts) == 3:
+                yield np.asarray(verts), cur
+                verts = []
+
+
+def stl_triangles(path: Path, solid: str | None = None) -> np.ndarray:
+    """(N,3,3) vertices from an ASCII STL, optionally one named solid only."""
+    verts, cur = [], None
+    for ln in Path(path).read_text().splitlines():
+        s = ln.lstrip()
+        if s.startswith("solid"):
+            cur = s[5:].strip()
+        elif s.startswith("vertex") and (solid is None or cur == solid):
+            verts.append(s.split()[1:4])
     return np.asarray(verts, dtype=float).reshape(-1, 3, 3)
 
 
