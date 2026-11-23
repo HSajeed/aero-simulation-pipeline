@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aero"
+version = "0.0.1"
+description = "Automated, self-verifying OpenVSP -> OpenFOAM CFD pipeline"
+requires-python = ">=3.14"
+# openvsp is installed from the pinned OpenVSP .deb (/opt/OpenVSP/python), not PyPI.
+dependencies = [
+    "pydantic>=2",
+    "pyyaml",
+    "typer",
+    "jinja2",
+    "numpy",
+    "scipy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+ml = ["pandas", "scikit-learn"]
+viz = ["pyvista"]
+
+[project.scripts]
+aero = "aero.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
