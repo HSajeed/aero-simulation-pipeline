@@ -1,4 +1,4 @@
-# Phase report — Phases 0–5
+# Phase report — Phases 0–6
 
 ## Phase 0 — environment spike (d4ec268, 2026-11-23)
 
@@ -175,5 +175,47 @@ Bugs found and fixed (scratch runs, before production on `runs/`):
 Observation: no baseline run failed or was flagged at any gate after Phase 3; with sweep 0–10° there is
 no aggressive corner. See decisions.md, open items.
 
+## Phase 6 — reports and Tier 3 review queue (2026-11-24)
+Built: `report/plots.py` (matplotlib: residual history, CL/CD history with the Gate 3 window shaded,
+CFD vs VSPAERO CL bars, gate margins log10(value/threshold) coloured by the DB pass flag),
+`report/html.py` + `templates/report/run.html.j2` (one self-contained HTML per run, PNGs embedded,
+every number read from the DB: params, reference values, results, flag/failure reasons with exceedance,
+per-gate metrics vs thresholds with earlier attempts, corrections, review decisions),
+`review/queue.py` (severity ranking, transactional FLAGGED -> ACCEPTED | REJECTED + reviews row),
+`configs/review.yaml` (fixed label vocabulary), CLI: `aero report <study> [--run]`,
+`aero review list <study>`, `aero review open <run>`, `aero review decide <run> --accept|--reject
+--label L [--note] [--reviewer]`. 129 tests (14 new, synthetic DB in tmp_path).
+
+Severity order in `review list`: violated-check count, then worst check type, then worst exceedance
+(decisions V2–V4).
+
+### Harsh study (to produce flagged runs, decision V1)
+`configs/study_harsh.yaml`: span 6–18 m, sweep 0–40°, taper 0.15–1.0, washout 0–8°, fineness 5–12,
+n = 20, seed 42; everything else as baseline. Dry run of geom + mesh in a scratch runs-dir first (E5),
+then the real run: 27 min wall time with 4 workers. Log: `runs/_logs/harsh_run.log`.
+
+| Outcome | Runs |
+|---|---|
+| GEOM_FAIL -> UNRECOVERABLE, FEATURE_TOO_SMALL (taper 0.163, 0.211; no correction by design, G10) | 2 |
+| MESH_FAIL -> UNRECOVERABLE, SKEWNESS_HIGH after 3 corrections | 9 |
+| CHECKS_PASS (2 of them after one `n_smooth_patch` correction) | 9 |
+| FLAGGED | **0** |
+
+Gate 1: 29 SKEWNESS_HIGH corrections over 11 runs; 2 recovered. Final skewness of the failed runs
+mostly 4.1–5.2 (limit 4); worst 13.7 (sweep 38.9°). Step 3 of the sequence (`n_relax_iter` 5 -> 10)
+left cell count and skewness unchanged in most runs (open item).
+
+Converged runs (9): CL vs VSPAERO floored difference 0.002–0.047 at α = 0 and 0.027–0.202 at 4°
+(limit 0.25; worst run 0006, washout 7.9°); CL–alpha slope 3.72–5.04 /rad; std(CL) <= 2.6e-5;
+mass imbalance <= 1.1e-8; CD 0.0058–0.019 (numerical drag).
+
+### Acceptance
+- Reports: written for all 30 runs (baseline + harsh), including failed runs.
+- Review CLI end to end: verified by tests on a synthetic DB (list ordering, open, decide, bad/missing
+  label, double decision, non-flagged refusal, status mirror, report shows the decision).
+- **Not met: "review 10 flagged runs end to end".** 0 of 19 converged runs (baseline + harsh) were
+  flagged, so there is nothing real to review. Pending human decision (decisions.md, P6-1).
+
 ## Status
-Phases 0–5 done. Next: Phase 6 (reports + review queue).
+Phases 0–6 built; the Phase 6 real-run review acceptance is pending (decisions.md, "Pending decisions").
+Next: Phase 7 (validation and mesh convergence).

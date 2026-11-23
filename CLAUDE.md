@@ -63,7 +63,9 @@ our own code will do.
 
 ## Code conventions
 - Package: `src/aero/`. CLI: Typer, entry point `aero`. `aero doctor` checks the
-  environment (container engine, image, `import openvsp`, paths).
+  environment (container engine, image, `import openvsp`, paths). `aero report`
+  writes per-run HTML; `aero review list|open|decide` is the Tier 3 queue
+  (labels in `configs/review.yaml`; only FLAGGED runs can be decided).
 - Core deps only: openvsp, pydantic, pyyaml, typer, jinja2, numpy, scipy,
   matplotlib (+ pytest). Optional extras: `ml` (pandas, scikit-learn),
   `viz` (pyvista). Ask before adding anything else.
