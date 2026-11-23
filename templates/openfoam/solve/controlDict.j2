@@ -15,6 +15,16 @@ functions
         liftDir ({{ lift_dir|join(' ') }}); dragDir ({{ drag_dir|join(' ') }}); pitchAxis (0 1 0);
         magUInf {{ U_inf }}; lRef {{ l_ref }}; Aref {{ a_ref }};   // half-model reference area
     }
+    farfieldFlux      // mass balance: net flux through the only open boundary
+    {
+        type surfaceFieldValue; libs (fieldFunctionObjects); writeControl timeStep; writeInterval 1;
+        regionType patch; name farfield; operation sum; fields (phi); writeFields false; log false;
+    }
+    farfieldFluxMag
+    {
+        type surfaceFieldValue; libs (fieldFunctionObjects); writeControl timeStep; writeInterval 1;
+        regionType patch; name farfield; operation sumMag; fields (phi); writeFields false; log false;
+    }
     solverInfo1
     {
         type solverInfo; libs (utilityFunctionObjects); fields (U p); writeResidualFields no;

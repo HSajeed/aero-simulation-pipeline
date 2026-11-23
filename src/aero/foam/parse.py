@@ -146,3 +146,8 @@ def parse_solver_log(text: str) -> dict:
             r"|keyword .* is undefined|Unknown .*Model|cannot find file|Entry .* not found)",
             text, re.S)),
     }
+
+
+def simple_converged(text: str) -> bool:
+    """simpleFoam stopped by residualControl."""
+    return bool(re.search(r"SIMPLE solution converged in", text))

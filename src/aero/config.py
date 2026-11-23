@@ -174,6 +174,7 @@ class Gate2(_Strict):
 
 class Gate3(_Strict):
     max_cl_rel_diff_vspaero: float
+    cl_vspaero_floor: float | None = None   # denominator floor for CL vs VSPAERO
     max_mass_imbalance: float
     coeff_std_window: int | None = None
     max_coeff_std: float | None = None

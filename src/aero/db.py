@@ -114,6 +114,16 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (run, phase, tag, iteration)
     );
     """,
+    # v4: per-alpha convergence statistics on results
+    """
+    ALTER TABLE results ADD COLUMN cl_std REAL;
+    ALTER TABLE results ADD COLUMN cd_std REAL;
+    ALTER TABLE results ADD COLUMN cm_std REAL;
+    ALTER TABLE results ADD COLUMN mass_imbalance REAL;
+    ALTER TABLE results ADD COLUMN converged INTEGER;
+    ALTER TABLE results ADD COLUMN start_iter INTEGER;
+    ALTER TABLE results ADD COLUMN end_iter INTEGER;
+    """,
 ]
 
 
@@ -227,6 +237,22 @@ def put_history(con, run_id: str, phase: str, tag: str, alpha: float,
     con.executemany(
         "INSERT OR REPLACE INTO history VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [(run_id, phase, tag, alpha, r["iteration"], *(r.get(k) for k in keys)) for r in rows])
+
+
+RESULT_KEYS = ("CL", "CD", "Cm", "iterations", "wall_time", "cl_std", "cd_std", "cm_std",
+               "mass_imbalance", "converged", "start_iter", "end_iter")
+
+
+def put_result(con, run_id: str, alpha: float, r: dict[str, Any]) -> None:
+    con.execute(
+        "INSERT OR REPLACE INTO results (run, alpha, %s) VALUES (?, ?, %s)"
+        % (", ".join(RESULT_KEYS), ", ".join("?" * len(RESULT_KEYS))),
+        (run_id, alpha, *(r.get(k) for k in RESULT_KEYS)))
+
+
+def get_results(con, run_id: str) -> dict[float, Any]:
+    return {r["alpha"]: r for r in con.execute(
+        "SELECT * FROM results WHERE run=? ORDER BY alpha", (run_id,))}
 
 
 def clear_reference(con, run_id: str, source: str) -> None:

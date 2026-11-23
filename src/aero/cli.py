@@ -25,8 +25,11 @@ def impls() -> dict:
     """Stage implementations, registered as phases land."""
     from aero.foam.mesh_stage import MeshStage
     from aero.foam.pilot_stage import PilotStage
+    from aero.foam.prod_stage import ProdStage
+    from aero.gates.checks_stage import ChecksStage
     from aero.geom.stage import GeomStage
-    return {"geom": GeomStage(), "mesh": MeshStage(), "pilot": PilotStage()}
+    return {"geom": GeomStage(), "mesh": MeshStage(), "pilot": PilotStage(),
+            "prod": ProdStage(), "checks": ChecksStage()}
 
 
 def _study_cfg(con, study: str) -> StudyConfig:

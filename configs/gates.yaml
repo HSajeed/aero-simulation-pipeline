@@ -27,8 +27,10 @@ gate2:                          # pilot (PLAN.md Phase 4)
 
 gate3:                          # plausibility (PLAN.md Phase 5)
   max_cl_rel_diff_vspaero: 0.25
+  cl_vspaero_floor: 0.05        # confirmed 2026-11-23: |CL_VSPAERO| floor (alpha 0: CL ~ 0)
   max_mass_imbalance: 1.0e-3    # fraction of inflow
   coeff_std_window: 200         # confirmed 2026-11-23 (iterations)
   max_coeff_std: 1.0e-3         # confirmed: absolute std of CL over the window
   cl_alpha_slope_range: [3.0, 6.0]  # confirmed (per rad); Helmbold 3.85-5.25 over design space
   min_cd: 0.0                   # confirmed: negative CD is flagged
+  # Cm / dCm/dalpha: warn only, never flags (human decision 2026-11-23)

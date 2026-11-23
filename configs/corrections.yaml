@@ -43,3 +43,11 @@ gate2:
     - {action: set, param: solver.potential_init, value: false}
   # CASE_SETUP_ERROR (bad/missing BC etc.): never auto-fixed (physics -> human)
   # MISSING_OUTPUT, UNDECIDED_THRESHOLD: no auto-correction
+
+prod:                                   # restart from the latest written time
+  SOLVER_CRASHED: &prod_diverge
+    - {action: scale, param: solver.relax_U,               by: 0.7}
+    - {action: add,   param: solver.n_non_orth_correctors, by: 1}
+    - {action: scale, param: solver.relax_p,               by: 0.67}
+  NAN_DETECTED: *prod_diverge
+  # CASE_SETUP_ERROR, MISSING_OUTPUT: no auto-correction

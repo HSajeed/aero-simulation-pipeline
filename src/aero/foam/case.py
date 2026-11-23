@@ -101,6 +101,35 @@ def freestream_dirs(alpha_deg: float) -> tuple[list[float], list[float]]:
     return [_r(math.cos(a)), 0.0, _r(math.sin(a))], [_r(-math.sin(a)), 0.0, _r(math.cos(a))]
 
 
+def write_solve_system(case: Path, geom: dict, settings: dict, alpha: float, end_time: int,
+                       residual_control: bool, change_alpha: bool, tag: str) -> str:
+    """Re-render system/ for a production leg (alpha, endTime, residualControl,
+    final div scheme) and return its script. With change_alpha, the latest time's
+    farfield freestreamValue is switched to the new alpha (changeDictionary works
+    on binary fields); the internal field is the warm start."""
+    fs, s = settings["freestream"], settings["solver"]
+    drag, lift = freestream_dirs(alpha)
+    U = [_r(fs["U_inf"] * drag[0]), 0.0, _r(fs["U_inf"] * drag[2])]
+    ctx = {"U": U, "rho_inf": fs["rho_inf"], "U_inf": fs["U_inf"],
+           "cofr": [_r(geom["x_ref"]), 0.0, 0.0], "lift_dir": lift, "drag_dir": drag,
+           "l_ref": _r(geom["mac"]), "a_ref": _r(geom["sref_half"]),
+           "div_u": DIV[s["div_scheme_U"]], "end_time": end_time,
+           "residual_control": residual_control, "s": s}
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATES / "solve"),
+                             undefined=jinja2.StrictUndefined, keep_trailing_newline=True)
+    for rel in ("system/controlDict", "system/fvSchemes", "system/fvSolution"):
+        p = case / rel
+        p.write_text(env.get_template(SOLVE_FILES[rel]).render(object=p.name, **ctx))
+    lines = [f"# production leg (tag {tag}): alpha = {alpha} deg, endTime {end_time}"]
+    if change_alpha:
+        (case / "system" / "changeDictionaryDict").write_text(
+            "FoamFile { version 2.0; format ascii; class dictionary; object changeDictionaryDict; }\n"
+            f"U {{ boundaryField {{ farfield {{ freestreamValue uniform ({' '.join(map(str, U))}); }} }} }}\n")
+        lines.append(f"changeDictionary -latestTime > log.changeDictionary.{tag} 2>&1")
+    lines.append(f"simpleFoam > log.simpleFoam.{tag} 2>&1")
+    return "\n".join(lines) + "\n"
+
+
 def write_solve_case(case: Path, mesh_case: Path, geom: dict, settings: dict, alpha: float,
                      tag: str, end_time: int, residual_control: bool,
                      templates: Path | None = None) -> str:
