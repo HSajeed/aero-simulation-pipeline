@@ -11,7 +11,9 @@ replayed in order, so a run resumes correctly after a crash.
 
 from __future__ import annotations
 
+import contextlib
 import copy
+import fcntl
 import json
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
@@ -191,6 +193,34 @@ def load_context(con, runs_dir: Path, run_id: str) -> RunContext:
     return RunContext(run_id, rdir, frozen["params"], settings)
 
 
+# ---------------------------------------------------------------- run lock
+LOCK_NAME = ".lock"
+
+
+@contextlib.contextmanager
+def run_lock(rdir: Path):
+    """Exclusive, non-blocking per-run lock (flock on <run dir>/.lock).
+    Yields True if acquired, False if another process holds it. The kernel
+    drops the lock when its process exits, so a crash leaves no stale lock."""
+    fh = open(Path(rdir) / LOCK_NAME, "a")
+    try:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+    finally:
+        fh.close()
+
+
+class RunLocked(RuntimeError):
+    """The run is being worked on by another process."""
+
+
 # -------------------------------------------------------------------- runner
 class Runner:
     def __init__(self, runs_dir: Path, gates: GatesConfig, impls: dict[str, Stage],
@@ -208,18 +238,33 @@ class Runner:
         row = db.set_status(con, ctx.run_id, status, failure_code=code)
         write_status_mirror(ctx.dir, row)
 
+    def _rdir(self, con, run_id: str) -> Path:
+        return run_dir(self.runs_dir, db.get_run(con, run_id)["study"], run_id)
+
     def force(self, run_id: str, stage: str) -> None:
-        """Rewind a run to the input status of `stage` (explicit --force only)."""
+        """Rewind a run to the input status of `stage` (explicit --force only).
+        Refused while another process works on the run."""
         sp = next(s for s in PIPELINE if s.name == stage)
         con = self._con()
-        row = db.force_reset(con, run_id, sp.requires)
-        write_status_mirror(run_dir(self.runs_dir, row["study"], run_id), row)
+        with run_lock(self._rdir(con, run_id)) as got:
+            if not got:
+                raise RunLocked(f"{run_id} is locked by another aero process; --force refused")
+            row = db.force_reset(con, run_id, sp.requires)
+            write_status_mirror(run_dir(self.runs_dir, row["study"], run_id), row)
         self.log(f"{run_id}: --force reset to {sp.requires}")
 
     def run_one(self, run_id: str, only: str | None = None) -> Status:
         """Advance a run until terminal / FLAGGED / an unbuilt stage, or after
-        stage `only`. Finished stages are skipped, so reruns are no-ops."""
+        stage `only`. Finished stages are skipped, so reruns are no-ops. A run
+        locked by another process is skipped (status returned unchanged)."""
         con = self._con()
+        with run_lock(self._rdir(con, run_id)) as got:
+            if not got:
+                self.log(f"{run_id}: locked by another aero process; skipped")
+                return Status(db.get_run(con, run_id)["status"])
+            return self._advance(con, run_id, only)
+
+    def _advance(self, con, run_id: str, only: str | None) -> Status:
         while True:
             status = Status(db.get_run(con, run_id)["status"])
             sp = spec_for(status)

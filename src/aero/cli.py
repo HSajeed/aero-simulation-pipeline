@@ -74,8 +74,13 @@ def run(study: str, run_id: Optional[str] = typer.Option(None, "--run"),
     runner = Runner(runs_dir, load_gates(gates), impls(), corrections=rules.load(corrections))
     ids = [run_id] if run_id else [r["id"] for r in db.list_runs(con, study)]
     if force:
+        from aero.runner import RunLocked
         for rid in ids:
-            runner.force(rid, stage)
+            try:
+                runner.force(rid, stage)
+            except RunLocked as e:
+                typer.echo(str(e), err=True)
+                raise typer.Exit(2)
     out = runner.run_study(study, workers or cfg.workers, run_id, stage)
     for rid, st in out.items():
         typer.echo(f"{rid}  {st}")
@@ -124,6 +129,19 @@ def report(study: str, run_id: Optional[str] = typer.Option(None, "--run"),
     ids = [run_id] if run_id else [r["id"] for r in db.list_runs(con, study)]
     for p in _write_reports(con, runs_dir, ids, gates):
         typer.echo(str(p))
+
+
+@app.command()
+def summary(study: str, reports: bool = typer.Option(False, "--reports",
+                                                     help="also (re)write every run report"),
+            runs_dir: Path = RunsDir, gates: Path = GatesOpt):
+    """Write the study summary HTML (funnel, corrections, flags, reviews, wall time, results) from the DB."""
+    from aero.report.summary import write_summary
+    con = db.connect(db_path(runs_dir))
+    _study_cfg(con, study)
+    if reports:
+        _write_reports(con, runs_dir, [r["id"] for r in db.list_runs(con, study)], gates)
+    typer.echo(str(write_summary(con, runs_dir, study)))
 
 
 # ------------------------------------------------------------------- review

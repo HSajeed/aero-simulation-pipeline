@@ -169,3 +169,64 @@ def test_prod_failure_retries_then_unrecoverable(study, gates_cfg):
     assert r.run_one("baseline-0001") == Status.UNRECOVERABLE
     corr = db.corrections_for(db.connect(db_path(runs)), "baseline-0001", "prod")
     assert len(corr) == 3
+
+
+def test_locked_run_is_skipped_not_run_twice(study, gates_cfg):
+    """Open item (Phase 6): two `aero run` on one study must not run a case twice."""
+    from aero.runner import run_dir, run_lock
+    runs, cfg = study
+    impl = Fake()
+    r = Runner(runs, gates_cfg, {"geom": impl}, log=quiet)
+    with run_lock(run_dir(runs, cfg.name, "baseline-0001")) as got:   # "another process"
+        assert got
+        assert r.run_one("baseline-0001") == Status.PENDING
+        assert impl.calls == 0
+        with run_lock(run_dir(runs, cfg.name, "baseline-0001")) as again:
+            assert not again                                          # exclusive
+    assert r.run_one("baseline-0001") == Status.GEOM_OK                # lock released
+    assert impl.calls == 1
+
+
+def test_force_refused_while_locked(study, gates_cfg):
+    from aero.runner import RunLocked, run_dir, run_lock
+    runs, cfg = study
+    r = Runner(runs, gates_cfg, {"geom": Passing()}, log=quiet)
+    r.run_one("baseline-0001")
+    with run_lock(run_dir(runs, cfg.name, "baseline-0001")):
+        with pytest.raises(RunLocked):
+            r.force("baseline-0001", "geom")
+    assert db.get_run(db.connect(db_path(runs)), "baseline-0001")["status"] == Status.GEOM_OK
+
+
+def test_parallel_runners_each_run_once(study, gates_cfg, tmp_path):
+    """Two runner processes on the same study: every stage call happens once."""
+    import multiprocessing as mp
+    runs, cfg = study
+    log = tmp_path / "calls.log"
+    ctx = mp.get_context("fork")
+    procs = [ctx.Process(target=_count_runner, args=(runs, gates_cfg, log)) for _ in range(2)]
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join(60)
+        assert p.exitcode == 0
+    calls = log.read_text().split()
+    assert sorted(calls) == sorted(set(calls)) and len(calls) == 10
+
+
+class _Slow:
+    def __init__(self, log): self.log = log
+    def run(self, ctx):
+        import time
+        with open(self.log, "a") as fh:
+            fh.write(ctx.run_id + "\n")
+        time.sleep(0.2)
+        return StageResult(True)
+    def check(self, ctx, res): return GateResult(True, None, [Metric("ok", 1, 1, True)])
+    def correct(self, ctx, g, a): return None
+
+
+def _count_runner(runs, gates_cfg, log):
+    r = Runner(runs, gates_cfg, {"geom": _Slow(log)}, log=quiet)
+    for rid in [f"baseline-{i:04d}" for i in range(1, 11)]:
+        r.run_one(rid)
