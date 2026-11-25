@@ -117,6 +117,9 @@ mass imbalance ≤ 1e-8. α₂ always stops at the 400-iteration minimum (R6), s
 | V11 | Harsh study run with Phase 3 mesh correction rules unchanged although the scratch dry run gave 9/18 SKEWNESS_HIGH → UNRECOVERABLE | H | Failures are real data. Offered: n = 40, or fix the correction sequence first. Chosen: run 20 as is; any shortfall of flagged runs is completed in Phase 8. |
 | V12 | High-AoA study: baseline design points (same ranges, seed, n = 10), alphas **[4, 20]**, pilot at α₁ = 4° | H (2026-11-24) | To produce real flagged cases (P6-5). Alpha values are physics; chosen by H. |
 | V13 | Dashboard/UI (subagent feasibility study, 2026-11-24): no framework now. Phase 8: `aero summary` static study HTML (funnel, corrections, flags/reviews, results, parameter-space plots, links to run reports); later optional stdlib `aero serve` on 127.0.0.1 whose only write is a review form calling `queue.decide()`. No new deps. Launching studies stays CLI-only (a new study = a committed `configs/study_*.yaml`). Datasette outside the venv is fine for ad-hoc browsing | H (noted, accepted) | Small single-user data; reuses `report/html.py`, `report/plots.py`, `review/queue.py`. Rejected: Streamlit/Dash/Panel (~150–250 MB deps, estimated), MLflow/Aim (second data store, no 3.14), Grafana (cannot call `decide`). |
+| V14 | P6-2 closed: Gate 3 thresholds unchanged | H (2026-11-25) | 0 flags at alphas 0°/4° is expected: easy cases, no wrong physics expected there. Not evidence that Gate 3 is too loose; the 20° runs show it does flag. |
+| V15 | P6-4 accepted: add a human label for UNRECOVERABLE runs (label only, status unchanged) | H (2026-11-25) | Separates e.g. infeasible designs from mesher limitations for the Phase 9 classifier. Implementation timing and failure-specific labels: see P6-6. |
+| V16 | P6-5 closed: data are enough for Phases 6–7; varied flags come from the Phase 8 batch (mixed alphas, e.g. 8–16°, plus harsher geometry) | H (2026-11-25) | All 10 high_aoa flags are one failure mode, perfectly predicted by alpha = 20, so they add little for Phase 9; the planned 50–100-run batch is the right place for variety. |
 
 ### Phase 6 outcome
 Harsh study: 9 CHECKS_PASS, 9 SKEWNESS_HIGH and 2 FEATURE_TOO_SMALL UNRECOVERABLE, **0 FLAGGED**.
@@ -130,10 +133,12 @@ High-AoA study (V12): **10/10 FLAGGED**, all with COEFF_NOT_CONVERGED, CL_VS_VSP
 | # | Question | Context / options |
 |---|---|---|
 | P6-1 | **Human review of the 10 flagged high_aoa runs** (Phase 6 acceptance) | `aero review list high_aoa`, `aero review open <run>`, `aero review decide <run> --accept|--reject --label L --note ...`. All 10 are qualitatively the same (20° CL collapse + oscillation, likely spurious separation in the inviscid solver); the label choice (e.g. `separated_flow`, `not_converged`, `reference_wrong`) is the human's. |
-| P6-2 | Is Gate 3 too loose for this design space? | Converged runs never flag; Gate 3's value is unproven until something fails it. Recommendation: no threshold change before the Phase 7 GCI study shows the mesh-related CL uncertainty. |
+| P6-2 | ~~Is Gate 3 too loose?~~ Closed (V14). | |
 | P6-3 | SKEWNESS_HIGH correction sequence | Step 3 (`n_relax_iter` 5→10) is ineffective; step 2 costs +25–30 % cells for no gain. Numerical rule change (e.g. replace with `feature_level` +1 or `snap_tolerance`), to be tested in scratch first. Separately: keep the skewness limit at 4 (PLAN) or not, a threshold decision. 9/18 harsh meshes fail on it, mostly by 4.1–5.2. |
-| P6-5 | ~~Pending run: high-AoA study~~ **Done** (V12): 10/10 FLAGGED. Remaining question: the flags are homogeneous; a mixed set (e.g. alphas between 8° and 16°) would give the review/classifier more varied cases. | |
-| P6-4 | Human labelling of UNRECOVERABLE runs? | Beyond PLAN: the review queue only handles FLAGGED runs (state machine). Labelling "bad geometry" vs "mesher limitation" for failed runs could help the Phase 9 classifier. |
+| P6-5 | ~~High-AoA study~~ Done (V12); closed (V16). | |
+| P6-4 | ~~Human labelling of UNRECOVERABLE runs?~~ Accepted (V15). | |
+| P6-6 | When to build the V15 UNRECOVERABLE labelling, and its labels | Proposal: `aero review label <run> --label L --note`, only for UNRECOVERABLE runs, status unchanged; extra labels e.g. `mesher_limitation`, `design_infeasible`. |
+| P6-7 | Field contours for review (separation real vs numerical?) | H (2026-11-25): the 20° separation is probably an inviscid-solver artifact, but could be real (high AoA); hard to judge without contours. Proposal: OpenFOAM `surfaces` function object samples a few cutting planes (raw text) -> matplotlib contours of U/p in the report; no new dependency; images for review only (rule 4). |
 
 ### Open items for later phases (no decision yet)
 - **Runner has no lock** (found by the dashboard study): two concurrent `aero run` on the same study can
