@@ -341,4 +341,5 @@ end to end, unattended until review) met.
 
 ## Status
 Phases 0–8 done (Phase 8 acceptance met 2026-11-25). Pending human item: failure labels for the
-11 harsh UNRECOVERABLE runs (P6-6). Next: Phase 9 (ML layer).
+11 harsh UNRECOVERABLE runs (P6-6). Phase 9 (ML) deferred to future work by the human (B9): it needs
+unsteady and/or viscous simulations first so that flags and review labels are physically correct.
