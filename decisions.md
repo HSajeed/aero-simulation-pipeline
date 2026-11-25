@@ -151,6 +151,18 @@ CL–α slope: CFD Richardson value 4.600 /rad vs Helmbold 4.573 (0.6 %) and VSP
 baseline runs CFD/Helmbold = 0.999 (0.974–1.021), CFD/VSPAERO = 1.044 (1.023–1.085). CD(4°) falls 0.0156 → 0.0110
 with refinement, extrapolated ≈ 0.007, still ~2× VSPAERO CDi 0.00365: inviscid CD is numerical, not physical drag.
 
+## Batch study (Phase 8)
+
+| # | Decision | By | Why |
+|---|---|---|---|
+| B1 | Batch size **n = 25** (PLAN: 50–100) | H (2026-11-25) | Enough to show the unattended funnel; keeps compute small. Limits Phase 9 (e.g. a 25-point surrogate at one alpha pair). |
+| B2 | Per-run lock: `flock` on `runs/<study>/<run>/.lock` held by `run_one`; a locked run is **skipped** (not waited for); `--force` refused while locked | A | Closes the "runner has no lock" open item: two `aero run` on one study can no longer run a case twice (tested with two real processes). The kernel drops the lock when its process dies, so a crash leaves no stale lock. |
+| B3 | Cutting-plane sampling runs automatically in the checks stage, before Gate 3; its outcome (or exception) is only logged to `case/log.sample_status` | A | Flagged runs reach the reviewer with contours. Report-only (rule 4): tested that a crash in sampling leaves the Gate 3 verdict identical. |
+| B4 | `aero summary <study> [--reports]` writes `runs/<study>/summary.html` from the DB: funnel (furthest gate passed per run; UNRECOVERABLE = gate of its last gate_results row; "after auto-correction" = had corrections at that gate), outcomes, failure codes + failure labels, flag reasons + review decisions, corrections by gate/code/setting with recovery count, wall time per stage, CL/CD vs each parameter and a 2-D map, run table with report links | A (V13 plan) | Phase 8 acceptance ("one command produces the study summary HTML from the DB"). |
+
+Pending (human): parameter ranges; alphas: provisional **10°/14°** (H), to be confirmed by a scratch probe of
+3 contrasting designs at 14° (centre, max sweep, min taper) during the dry run; change if all or none separate.
+
 ## Pending decisions (human)
 
 | # | Question | Context / options |
@@ -164,10 +176,8 @@ with refinement, extrapolated ≈ 0.007, still ~2× VSPAERO CDi 0.00365: invisci
 | P6-7 | ~~Field contours~~ Done (V18); all 29 finished runs sampled. | |
 
 ### Open items for later phases (no decision yet)
-- **Runner has no lock** (found by the dashboard study): two concurrent `aero run` on the same study can
-  pick up the same PENDING/PILOT_OK run and run it twice. Needs a per-run (or per-study) lockfile in
-  `runner.py` before any automated or UI launching; until then, run one `aero run` per study at a time.
-- Dashboard (V13) is a Phase 8 deliverable: `aero summary` first, `aero serve` optional.
+- ~~Runner has no lock~~ Fixed in Phase 8 (B2).
+- Dashboard (V13): `aero summary` done (B4); `aero serve` optional, later.
 - **Natural-language operator agent** (human, 2026-11-25; start only after the pipeline is built end to end,
   i.e. after Phase 10): optional `aero agent` with a small local model (e.g. Gemma-class, via llama.cpp/Ollama
   as an optional external tool, off by default). A *worker*, not a reasoner or decision maker: it only executes
@@ -178,7 +188,7 @@ with refinement, extrapolated ≈ 0.007, still ~2× VSPAERO CDi 0.00365: invisci
   free-text causes mapped to the label vocabulary and shown before use; every action logged with the human's
   original instruction; never a gate, never picks corrections or physics. Prerequisites: runner lock (above),
   `--json` output for `status`/`review list`, background run + done-notification (stdlib, no LLM needed).
-- `aero sample` is a manual step; make it run automatically after production (e.g. in the checks stage, never affecting the gate) in Phase 8.
+- ~~`aero sample` is a manual step~~ Automatic since Phase 8 (B3).
 - With sweep narrowed to 0–10° (S3) the baseline produced **no** Gate 0–3 failures or flags; the
   Phase 8 batch / Phase 9 classifier will need a wider or deliberately harsher parameter range to
   generate real failures. Human decision when Phase 8 starts.

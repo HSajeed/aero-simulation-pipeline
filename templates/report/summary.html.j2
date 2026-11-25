@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ d.study }} summary</title>
+{% include "_style.html.j2" %}
+</head>
+<body>
+<main>
+<h1>Study {{ d.study }}</h1>
+<div class="muted">{{ d.n }} runs · alphas {{ d.alphas|join("°, ") }}° · generated {{ generated }} from <code>{{ db_file }}</code></div>
+
+<div class="box">
+  <b>{{ d.n }} variants, 0 manual steps until review.</b>
+  {{ d.funnel[-2].passed }} of {{ d.n }} reached a production result
+  ({{ d.n - d.funnel[-2].passed }} stopped at Gates 0–2 or production).
+  {{ d.auto_corrected_runs }} runs received automatic corrections, {{ d.recovered_runs }} of them recovered.
+  {% if d.reached_g3 %}{{ d.flagged }} of {{ d.reached_g3 }} converged runs ({{ (100 * d.flagged / d.reached_g3)|round(1) }} %) were flagged at Gate 3{% if d.decisions %}; human review: {% for k, v in d.decisions|dictsort %}{{ v }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}.{% endif %}
+  Total recorded wall time {{ (d.wall_total / 3600)|round(2) }} h.
+</div>
+
+<h2>Funnel</h2>
+{% if figs.funnel %}<img alt="funnel" src="data:image/png;base64,{{ figs.funnel }}">{% endif %}
+<div class="wrap"><table>
+  <tr><th>step</th><th class="num">passed</th><th class="num">of which after auto-correction</th><th class="num">stopped here</th></tr>
+  <tr><td>started</td><td class="num">{{ d.n }}</td><td></td><td></td></tr>
+  {% for f in d.funnel %}
+  <tr><td>{{ f.label }}</td><td class="num">{{ f.passed }}</td><td class="num">{{ f.corrected }}</td><td class="num">{{ f.stopped }}</td></tr>
+  {% endfor %}
+</table></div>
+<p class="muted">Gate 3 does not stop a run: a run that fails it is FLAGGED and waits for a human. "Stopped here" counts
+runs whose final status is a failure at that step (UNRECOVERABLE or an unfinished *_FAIL).</p>
+
+<h2>Outcomes</h2>
+<div class="wrap"><table>
+  <tr><th>status</th><th class="num">runs</th></tr>
+  {% for k, v in d.status_counts|dictsort %}<tr><td><span class="s-{{ k }}">{{ k }}</span></td><td class="num">{{ v }}</td></tr>{% endfor %}
+</table></div>
+{% if d.fail_codes %}
+<h3>Unrecoverable: failure codes and human failure labels</h3>
+<div class="wrap"><table>
+  <tr><th>failure code</th><th class="num">runs</th></tr>
+  {% for k, v in d.fail_codes|dictsort %}<tr><td><code>{{ k }}</code></td><td class="num">{{ v }}</td></tr>{% endfor %}
+</table></div>
+<p>Failure labels: {% for k, v in d.failure_labels|dictsort %}<code>{{ k }}</code> {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+{% if d.flagged %}
+<h3>Flagged: reasons and review</h3>
+<div class="wrap"><table>
+  <tr><th>Gate 3 reason</th><th class="num">runs</th></tr>
+  {% for k, v in d.flag_reasons|dictsort %}<tr><td><code>{{ k }}</code></td><td class="num">{{ v }}</td></tr>{% endfor %}
+</table></div>
+<p>Decisions: {% for k, v in d.decisions|dictsort %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% else %}none yet{% endfor %}
+· labels: {% for k, v in d.review_labels|dictsort %}<code>{{ k }}</code> {{ v }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+· waiting in the queue: {{ d.status_counts.get("FLAGGED", 0) }}</p>
+{% endif %}
+
+<h2>Automatic corrections</h2>
+{% if d.corrections %}
+<div class="wrap"><table>
+  <tr><th>gate</th><th>failure code</th><th>setting changed</th><th class="num">corrections</th><th class="num">runs</th><th class="num">runs that then passed the gate</th></tr>
+  {% for c in d.corrections %}
+  <tr><td>{{ c.gate }}</td><td><code>{{ c.code }}</code></td><td><code>{{ c.param }}</code></td>
+      <td class="num">{{ c.n }}</td><td class="num">{{ c.runs }}</td><td class="num">{{ c.recovered }}</td></tr>
+  {% endfor %}
+</table></div>
+{% else %}<p class="muted">none</p>{% endif %}
+
+<h2>Wall time</h2>
+<div class="wrap"><table>
+  <tr><th>stage</th><th class="num">total [h]</th><th class="num">mean per run [min]</th></tr>
+  {% for k in ("mesh", "pilot", "prod") %}
+  <tr><td>{{ k }}</td><td class="num">{{ (d.wall[k] / 3600)|round(2) }}</td><td class="num">{{ (d.wall[k] / 60 / (d.n or 1))|round(1) }}</td></tr>
+  {% endfor %}
+  <tr><td><b>total</b></td><td class="num"><b>{{ (d.wall_total / 3600)|round(2) }}</b></td><td class="num">{{ (d.wall_total / 60 / (d.n or 1))|round(1) }}</td></tr>
+</table></div>
+<p class="muted">Sum over all attempts of each stage, single-core cases ({{ d.cfg.workers }} run concurrently, so elapsed time is shorter).
+Geometry/VSPAERO time is not recorded.</p>
+
+<h2>Results over the parameter space</h2>
+{% if figs.params %}<img alt="CL and CD vs parameters" src="data:image/png;base64,{{ figs.params }}">{% endif %}
+{% if figs.map2d %}<img alt="CL map" src="data:image/png;base64,{{ figs.map2d }}">{% endif %}
+<p class="muted">Physics v1 is inviscid (slip walls): CD is numerical + induced drag, not physical drag (Phase 7).</p>
+
+<h2>Runs</h2>
+<div class="wrap"><table>
+  <tr><th>run</th><th>status</th><th>code / review</th>
+      {% for p in d.cfg.parameters %}<th class="num">{{ p.name }}</th>{% endfor %}
+      {% for a in d.alphas %}<th class="num">CL {{ a|fmt }}°</th>{% endfor %}
+      {% for a in d.alphas %}<th class="num">CD {{ a|fmt }}°</th>{% endfor %}
+      <th class="num">corr.</th></tr>
+  {% for r in d.runs %}
+  <tr><td>{% if r.report %}<a href="{{ r.report }}">{{ r.id }}</a>{% else %}{{ r.id }}{% endif %}</td>
+      <td><span class="s-{{ r.status }}">{{ r.status }}</span></td>
+      <td>{% if r.failure_code %}<code>{{ r.failure_code }}</code>{% endif %}
+          {% if r.review %} · {{ r.review.decision }} <code>{{ r.review.label }}</code>{% endif %}
+          {% if r.failure_label %} · <code>{{ r.failure_label }}</code>{% endif %}</td>
+      {% for p in d.cfg.parameters %}<td class="num">{{ r.params[p.name]|fmt(3) }}</td>{% endfor %}
+      {% for a in d.alphas %}<td class="num">{{ (r.results.get(a) or {}).get("CL")|fmt }}</td>{% endfor %}
+      {% for a in d.alphas %}<td class="num">{{ (r.results.get(a) or {}).get("CD")|fmt }}</td>{% endfor %}
+      <td class="num">{{ r.corrections|length }}</td></tr>
+  {% endfor %}
+</table></div>
+
+<footer>Every number on this page is read from the run database; nothing is typed in. Regenerate with
+<code>aero summary {{ d.study }}</code>.</footer>
+</main>
+</body>
+</html>
