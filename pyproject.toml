@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aero"
 version = "0.0.1"
 description = "Automated, self-verifying OpenVSP -> OpenFOAM CFD pipeline"
+license = "MIT"
 requires-python = ">=3.14"
 # openvsp is installed from the pinned OpenVSP .deb (/opt/OpenVSP/python), not PyPI.
 dependencies = [

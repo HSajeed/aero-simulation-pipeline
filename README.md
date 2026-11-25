@@ -142,3 +142,8 @@ through its socket, so OpenFOAM runs in its own pinned image exactly as without 
 | `configs/` | studies, gate thresholds, correction rules, review labels |
 | `notebooks/validation.ipynb` | mesh convergence and CL–α validation (Phase 7) |
 | `PLAN.md`, `PHASE_REPORT.md`, `decisions.md` | the plan, what each phase delivered, every decision and who made it |
+
+## License
+
+MIT (see [`LICENSE`](LICENSE)) for the code in this repository. OpenVSP (NASA Open Source Agreement) and
+OpenFOAM (GPL) are not included; they are used as external tools under their own licences.
