@@ -93,3 +93,32 @@ def test_mass_imbalance_from_function_objects(tmp_path):
             f"# Region type : patch farfield\n# Time\t{col}\n301\t{val}\n")
     assert mass_imbalance(tmp_path, 301) == pytest.approx(2e-3 / 20)
     assert mass_imbalance(tmp_path, 999) is None
+
+
+def test_checks_stage_sampling_never_affects_gate(tmp_path, study_cfg, gates_cfg, monkeypatch):
+    """Phase 8: automatic plane sampling is report-only; a crash in it is logged
+    and the Gate 3 verdict is the same as without sampling."""
+    from aero import db
+    from aero.foam import sample
+    from aero.gates.checks_stage import ChecksStage
+    from aero.runner import db_path, init_study, load_context
+    runs = tmp_path / "runs"
+    init_study(study_cfg, runs)
+    con = db.connect(db_path(runs))
+    rid = "baseline-0001"
+    for a, r in GOOD.items():
+        db.put_result(con, rid, a, r)
+    db.put_reference(con, rid, "vspaero", [{"alpha": a, **v} for a, v in REFS.items()])
+    con.commit()
+
+    def boom(*a, **k):
+        raise RuntimeError("container gone")
+    monkeypatch.setattr(sample, "sample_run", boom)
+    verdicts = []
+    for stage in (ChecksStage(sample=False), ChecksStage(sample=True)):
+        ctx = load_context(con, runs, rid)
+        ctx.con, ctx.gates = con, gates_cfg.model_dump(mode="json")
+        g = stage.check(ctx, stage.run(ctx))
+        verdicts.append((g.passed, g.failure_code, [(m.metric, m.value) for m in g.metrics]))
+    assert verdicts[0] == verdicts[1] and verdicts[0][0]
+    assert "container gone" in (ctx.dir / "case" / "log.sample_status").read_text()
