@@ -191,13 +191,17 @@ class GatesConfig(_Strict):
 
 
 class ReviewConfig(_Strict):
-    """Tier 3 review: fixed label vocabulary (configs/review.yaml)."""
+    """Tier 3 review: fixed label vocabularies (configs/review.yaml).
+    labels: decisions on FLAGGED runs; failure_labels: UNRECOVERABLE runs."""
     labels: list[str] = Field(min_length=1)
+    failure_labels: list[str] = Field(min_length=1)
 
     @model_validator(mode="after")
     def _unique(self):
-        if len(self.labels) != len(set(self.labels)):
-            raise ValueError("duplicate review labels")
+        for name in ("labels", "failure_labels"):
+            v = getattr(self, name)
+            if len(v) != len(set(v)):
+                raise ValueError(f"duplicate {name}")
         return self
 
 

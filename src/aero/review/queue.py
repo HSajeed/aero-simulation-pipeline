@@ -122,5 +122,44 @@ def decide(con, run_id: str, accept: bool, label: str, note: str | None,
     return row
 
 
+def label_failure(con, run_id: str, label: str, note: str | None, failure_labels: list[str],
+                  reviewer: str | None = None) -> None:
+    """Human label for an UNRECOVERABLE run (decision V15): a reviews row with
+    decision 'label'; the status is NOT changed. One label per run."""
+    if label not in failure_labels:
+        raise ReviewError(f"label '{label}' not in failure vocabulary: {', '.join(failure_labels)}")
+    if label == "other" and not (note and note.strip()):
+        raise ReviewError("label 'other' requires --note")
+    row = db.get_run(con, run_id)
+    if row["status"] != Status.UNRECOVERABLE:
+        raise ReviewError(f"{run_id} is {row['status']}; only UNRECOVERABLE runs get a failure label"
+                          " (FLAGGED runs: review decide)")
+    con.execute("BEGIN IMMEDIATE")
+    try:
+        if con.execute("SELECT 1 FROM reviews WHERE run=? AND decision='label'",
+                       (run_id,)).fetchone():
+            raise ReviewError(f"{run_id} already has a failure label")
+        con.execute("INSERT INTO reviews (run, decision, label, note, reviewer, time)"
+                    " VALUES (?,?,?,?,?,?)", (run_id, "label", label, note,
+                                              reviewer or getpass.getuser(), db.now()))
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+
+
+def failures(con, study: str) -> list[dict]:
+    """UNRECOVERABLE runs of a study with their failure label (None if unlabelled)."""
+    out = []
+    for r in db.list_runs(con, study):
+        if r["status"] != Status.UNRECOVERABLE:
+            continue
+        lab = con.execute("SELECT label FROM reviews WHERE run=? AND decision='label'",
+                          (r["id"],)).fetchone()
+        out.append({"run_id": r["id"], "failure_code": r["failure_code"],
+                    "label": lab["label"] if lab else None})
+    return out
+
+
 def reviews_for(con, run_id: str) -> list[dict]:
     return [dict(r) for r in con.execute("SELECT * FROM reviews WHERE run=? ORDER BY id", (run_id,))]

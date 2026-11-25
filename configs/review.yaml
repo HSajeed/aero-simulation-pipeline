@@ -8,3 +8,12 @@ labels:
   - not_converged
   - reference_wrong      # the VSPAERO reference, not the CFD, is wrong
   - other                # requires --note
+
+# Labels for UNRECOVERABLE runs (decision V15): a label only, the status stays
+# UNRECOVERABLE. Says *why* a run could not be completed (Phase 9 training data).
+failure_labels:
+  - mesher_limitation    # design is fine; meshing/correction rules could not make a valid mesh
+  - design_infeasible    # design cannot be resolved/built at the intended resolution
+  - geometry_artifact    # OpenVSP export / STL problem, not the design itself
+  - pipeline_bug         # caused by our code; fix and rerun in a new study
+  - other                # requires --note
