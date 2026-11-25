@@ -71,6 +71,7 @@ def test_summary_cli_writes_html(study):
     assert r.exit_code == 0, r.output
     html = (runs_dir / "baseline" / "summary.html").read_text()
     assert "Funnel" in html and "data:image/png;base64," in html
+    assert "CL vs α" in html and "CL vs parameters" in html and 'class="sort"' in html
     assert "SKEWNESS_HIGH" in html and "mesher_limitation" in html and "separated_flow" in html
     assert "baseline-0010" in html
 

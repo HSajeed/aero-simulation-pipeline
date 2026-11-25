@@ -9,14 +9,42 @@
 <body>
 <main>
 <h1>Study {{ d.study }}</h1>
-<div class="muted">{{ d.n }} runs · alphas {{ d.alphas|join("°, ") }}° · generated {{ generated }} from <code>{{ db_file }}</code></div>
+<div class="muted">{{ d.n }} runs · α {{ d.alphas|join("°, ") }}° ·
+{% for k, v in d.status_counts|dictsort %}<span class="s-{{ k }}">{{ v }} {{ k }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
+· generated {{ generated }}</div>
 
+<h2>CL vs α</h2>
+{% if figs.cl_alpha %}<img alt="CL vs alpha" src="data:image/png;base64,{{ figs.cl_alpha }}">{% else %}<p class="muted">no results yet</p>{% endif %}
+<h2>CL vs parameters</h2>
+{% if figs.cl_params %}<img alt="CL vs parameters" src="data:image/png;base64,{{ figs.cl_params }}">{% endif %}
+<p class="muted">Numbers on the plots = run number (e.g. 22 = {{ d.study }}-0022).</p>
+
+<h2>Runs</h2>
+<div class="wrap"><table class="sort">
+  <thead><tr><th>run</th><th>status</th><th>code / review</th>
+      {% for p in d.cfg.parameters %}<th class="num">{{ p|unit }}</th>{% endfor %}
+      {% for a in d.alphas %}<th class="num">CL {{ a|fmt }}°</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in d.runs %}
+  <tr><td>{% if r.report %}<a href="{{ r.report }}">{{ r.id }}</a>{% else %}{{ r.id }}{% endif %}</td>
+      <td><span class="s-{{ r.status }}">{{ r.status }}</span></td>
+      <td>{% if r.failure_code %}<code>{{ r.failure_code }}</code>{% endif %}
+          {% if r.review %} · {{ r.review.decision }} <code>{{ r.review.label }}</code>{% endif %}
+          {% if r.failure_label %} · <code>{{ r.failure_label }}</code>{% endif %}</td>
+      {% for p in d.cfg.parameters %}<td class="num">{{ r.params[p.name]|fmt(3) }}</td>{% endfor %}
+      {% for a in d.alphas %}<td class="num">{{ (r.results.get(a) or {}).get("CL")|fmt }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<p class="muted">Click a column header to sort.</p>
+
+<details><summary>Pipeline stats (funnel, flags, corrections, wall time)</summary>
 <div class="box">
   <b>{{ d.n }} variants, 0 manual steps until review.</b>
   {{ d.funnel[-2].passed }} of {{ d.n }} reached a production result
   ({{ d.n - d.funnel[-2].passed }} stopped at Gates 0–2 or production).
   {{ d.auto_corrected_runs }} runs received automatic corrections, {{ d.recovered_runs }} of them recovered.
-  {% if d.reached_g3 %}{{ d.flagged }} of {{ d.reached_g3 }} converged runs ({{ (100 * d.flagged / d.reached_g3)|round(1) }} %) were flagged at Gate 3{% if d.decisions %}; human review: {% for k, v in d.decisions|dictsort %}{{ v }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}.{% endif %}
+  {% if d.reached_g3 %}{{ d.flagged }} of {{ d.reached_g3 }} runs with a production result ({{ (100 * d.flagged / d.reached_g3)|round(1) }} %) were flagged at Gate 3{% if d.decisions %}; human review: {% for k, v in d.decisions|dictsort %}{{ v }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}.{% endif %}
   Total recorded wall time {{ (d.wall_total / 3600)|round(2) }} h.
 </div>
 
@@ -78,33 +106,19 @@ runs whose final status is a failure at that step (UNRECOVERABLE or an unfinishe
 <p class="muted">Sum over all attempts of each stage, single-core cases ({{ d.cfg.workers }} run concurrently, so elapsed time is shorter).
 Geometry/VSPAERO time is not recorded.</p>
 
-<h2>Results over the parameter space</h2>
-{% if figs.params %}<img alt="CL and CD vs parameters" src="data:image/png;base64,{{ figs.params }}">{% endif %}
-{% if figs.map2d %}<img alt="CL map" src="data:image/png;base64,{{ figs.map2d }}">{% endif %}
-<p class="muted">Physics v1 is inviscid (slip walls): CD is numerical + induced drag, not physical drag (Phase 7).</p>
-
-<h2>Runs</h2>
-<div class="wrap"><table>
-  <tr><th>run</th><th>status</th><th>code / review</th>
-      {% for p in d.cfg.parameters %}<th class="num">{{ p.name }}</th>{% endfor %}
-      {% for a in d.alphas %}<th class="num">CL {{ a|fmt }}°</th>{% endfor %}
-      {% for a in d.alphas %}<th class="num">CD {{ a|fmt }}°</th>{% endfor %}
-      <th class="num">corr.</th></tr>
-  {% for r in d.runs %}
-  <tr><td>{% if r.report %}<a href="{{ r.report }}">{{ r.id }}</a>{% else %}{{ r.id }}{% endif %}</td>
-      <td><span class="s-{{ r.status }}">{{ r.status }}</span></td>
-      <td>{% if r.failure_code %}<code>{{ r.failure_code }}</code>{% endif %}
-          {% if r.review %} · {{ r.review.decision }} <code>{{ r.review.label }}</code>{% endif %}
-          {% if r.failure_label %} · <code>{{ r.failure_label }}</code>{% endif %}</td>
-      {% for p in d.cfg.parameters %}<td class="num">{{ r.params[p.name]|fmt(3) }}</td>{% endfor %}
-      {% for a in d.alphas %}<td class="num">{{ (r.results.get(a) or {}).get("CL")|fmt }}</td>{% endfor %}
-      {% for a in d.alphas %}<td class="num">{{ (r.results.get(a) or {}).get("CD")|fmt }}</td>{% endfor %}
-      <td class="num">{{ r.corrections|length }}</td></tr>
-  {% endfor %}
-</table></div>
+</details>
 
 <footer>Every number on this page is read from the run database; nothing is typed in. Regenerate with
 <code>aero summary {{ d.study }}</code>.</footer>
 </main>
+<script>
+document.querySelectorAll("table.sort th").forEach((th, i) => th.onclick = () => {
+  const b = th.closest("table").tBodies[0], d = th.dataset.d = th.dataset.d === "1" ? "-1" : "1";
+  const v = r => { const s = r.cells[i].innerText.trim(), n = Number(s); return s && !isNaN(n) ? n : s; };
+  [...b.rows].sort((x, y) => { const a = v(x), c = v(y);
+    return (typeof a === typeof c ? (a > c) - (a < c) : typeof a === "number" ? -1 : 1) * d; })
+    .forEach(r => b.appendChild(r));
+});
+</script>
 </body>
 </html>

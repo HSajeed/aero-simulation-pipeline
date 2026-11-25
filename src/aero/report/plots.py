@@ -84,27 +84,19 @@ def coefficients(history: list[dict], results: dict[float, dict],
 
 
 def cfd_vs_reference(results: dict[float, dict], refs: dict[float, dict]) -> bytes | None:
-    alphas = sorted(set(results) | set(refs))
-    if not alphas:
-        return None
+    """CL vs alpha: CFD and VSPAERO (wing only)."""
     fig, ax = plt.subplots(figsize=(5.0, 3.2))
-    x = range(len(alphas))
-    w = 0.38
-    cfd = [results.get(a, {}).get("CL") for a in alphas]
-    ref = [refs.get(a, {}).get("CL") for a in alphas]
-    ax.bar([i - w / 2 for i in x], [v if v is not None else 0 for v in cfd], w, label="CFD")
-    ax.bar([i + w / 2 for i in x], [v if v is not None else 0 for v in ref], w,
-           label="VSPAERO (wing only)")
-    for i, (c, r) in enumerate(zip(cfd, ref)):
-        if c is None:
-            ax.text(i - w / 2, 0, "n/a", ha="center", va="bottom", fontsize=8)
-        if r is None:
-            ax.text(i + w / 2, 0, "n/a", ha="center", va="bottom", fontsize=8)
-    ax.axhline(0, color="0.3", lw=0.8)
-    ax.set_xticks(list(x), [f"α = {a:g}°" for a in alphas])
+    for src, lab, st in ((results, "CFD", "o-"), (refs, "VSPAERO (wing only)", "s--")):
+        pts = sorted((a, r["CL"]) for a, r in src.items() if r.get("CL") is not None)
+        if pts:
+            ax.plot(*zip(*pts), st, label=lab)
+    if not ax.lines:
+        plt.close(fig)
+        return None
+    ax.set_xlabel("α [°]")
     ax.set_ylabel("CL")
     ax.legend(fontsize=8)
-    ax.grid(True, axis="y", alpha=0.3)
+    ax.grid(True, alpha=0.3)
     return _png(fig)
 
 

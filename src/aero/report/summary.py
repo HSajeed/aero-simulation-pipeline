@@ -139,56 +139,75 @@ def funnel_png(d: dict) -> bytes | None:
 
 COLORS = {"CHECKS_PASS": "#1f7a45", "ACCEPTED": "#1f7a45", "FLAGGED": "#d97a00",
           "REJECTED": "#b3263a"}
+MARKERS = "os^Dv<>p*h"
 
 
-def param_maps_png(d: dict) -> bytes | None:
-    """CL and CD at the higher alpha against each parameter (one dot per run with
-    results, colour = status), failed runs as x on the parameter axis."""
-    params = [p["name"] for p in d["cfg"]["parameters"]]
-    a_hi = max(d["alphas"])
-    have = [r for r in d["runs"] if a_hi in r["results"] and r["results"][a_hi]["CL"] is not None]
-    failed = [r for r in d["runs"] if r["status"] == "UNRECOVERABLE"]
-    if not have and not failed:
+def _num(r: dict) -> str:
+    return r["id"].rsplit("-", 1)[-1].lstrip("0") or "0"
+
+
+def _cl(r: dict) -> list[tuple[float, float]]:
+    return sorted((a, x["CL"]) for a, x in r["results"].items() if x.get("CL") is not None)
+
+
+def _unit(p: dict) -> str:
+    u = {"deg": "°"}.get(p.get("unit", ""), p.get("unit", ""))
+    return f"{p['name']} [{u}]" if u else p["name"]
+
+
+def _status_legend(ax, runs, extra=()):
+    from matplotlib.lines import Line2D
+    h = [Line2D([], [], color=c, marker="o", ls="", label=s) for s, c in COLORS.items()
+         if any(r["status"] == s for r in runs)]
+    ax.legend(handles=h + list(extra), fontsize=7, loc="best")
+
+
+def cl_alpha_png(d: dict) -> bytes | None:
+    """CL vs alpha, one line per run, labelled with its run number."""
+    runs = [r for r in d["runs"] if _cl(r)]
+    if not runs:
         return None
-    fig, axs = plt.subplots(2, len(params), figsize=(2.6 * len(params), 5.0), squeeze=False)
-    for j, p in enumerate(params):
-        for i, q in enumerate(("CL", "CD")):
-            ax = axs[i][j]
-            ax.scatter([r["params"][p] for r in have], [r["results"][a_hi][q] for r in have],
-                       c=[COLORS.get(r["status"], "0.5") for r in have], s=22)
-            if failed and have:
-                lo = min(r["results"][a_hi][q] for r in have)
-                ax.scatter([r["params"][p] for r in failed], [lo] * len(failed), marker="x",
-                           color="#b3263a", s=26, label="unrecoverable")
-            if i == 1:
-                ax.set_xlabel(p)
-            if j == 0:
-                ax.set_ylabel(f"{q} ({a_hi:g}°)")
-    fig.suptitle("green: pass/accepted, orange: flagged, red: rejected; x: unrecoverable (at axis min)",
-                 fontsize=9)
+    fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    for k, r in enumerate(runs):
+        pts, c = _cl(r), COLORS.get(r["status"], "0.5")
+        ax.plot(*zip(*pts), "o-", color=c, lw=1, ms=3)
+        end, dx = (pts[-1], 4) if k % 2 else (pts[0], -4)    # alternate ends to reduce overlap
+        ax.annotate(_num(r), end, xytext=(dx, 0), textcoords="offset points", fontsize=7, color=c,
+                    va="center", ha="left" if dx > 0 else "right")
+    ax.set_xlabel("α [°]")
+    ax.set_ylabel("CL")
+    ax.grid(True, alpha=0.3)
+    _status_legend(ax, runs)
     return _png(fig)
 
 
-def map2d_png(d: dict) -> bytes | None:
-    """CL at the higher alpha over the first two parameters (filled = has results,
-    x = unrecoverable)."""
-    params = [p["name"] for p in d["cfg"]["parameters"]][:2]
-    a_hi = max(d["alphas"])
-    have = [r for r in d["runs"] if a_hi in r["results"] and r["results"][a_hi]["CL"] is not None]
-    if len(params) < 2 or not have:
+def cl_params_png(d: dict) -> bytes | None:
+    """CL vs each parameter; marker = alpha, colour = status, number = run."""
+    from matplotlib.lines import Line2D
+    runs = [r for r in d["runs"] if _cl(r)]
+    params = d["cfg"]["parameters"]
+    if not runs or not params:
         return None
-    fig, ax = plt.subplots(figsize=(5.6, 4.2))
-    sc = ax.scatter([r["params"][params[0]] for r in have], [r["params"][params[1]] for r in have],
-                    c=[r["results"][a_hi]["CL"] for r in have], cmap="viridis", s=60,
-                    edgecolors=[COLORS.get(r["status"], "0.5") for r in have], linewidths=1.5)
-    fail = [r for r in d["runs"] if r["status"] == "UNRECOVERABLE"]
-    ax.scatter([r["params"][params[0]] for r in fail], [r["params"][params[1]] for r in fail],
-               marker="x", color="#b3263a", s=50, label="unrecoverable")
-    fig.colorbar(sc, ax=ax, label=f"CL ({a_hi:g}°)")
-    ax.set_xlabel(params[0])
-    ax.set_ylabel(params[1])
-    if fail:
-        ax.legend(fontsize=8)
+    ncol = min(3, len(params))
+    nrow = -(-len(params) // ncol)
+    fig, axs = plt.subplots(nrow, ncol, figsize=(4.0 * ncol, 3.4 * nrow), squeeze=False)
+    mk = {a: MARKERS[i % len(MARKERS)] for i, a in enumerate(d["alphas"])}
+    for ax, p in zip(axs.flat, params):
+        for r in runs:
+            x, pts, c = r["params"][p["name"]], _cl(r), COLORS.get(r["status"], "0.5")
+            ax.plot([x] * len(pts), [v for _, v in pts], color="0.8", lw=0.8, zorder=1)
+            for a, v in pts:
+                ax.scatter(x, v, marker=mk.get(a, "o"), color=c, s=22, zorder=2)
+            ax.annotate(_num(r), (x, pts[-1][1]), xytext=(3, 3), textcoords="offset points",
+                        fontsize=6, color=c)
+        ax.set_xlabel(_unit(p))
+        ax.set_ylabel("CL")
+        ax.grid(True, alpha=0.3)
+    for ax in list(axs.flat)[len(params):]:
+        ax.axis("off")
+    _status_legend(axs.flat[0], runs, [Line2D([], [], color="k", marker=m, ls="", label=f"α = {a:g}°")
+                                       for a, m in mk.items()])
+    fig.tight_layout()
     return _png(fig)
 
 
@@ -202,12 +221,13 @@ def render(con, study: str, runs_dir: Path) -> str:
     for r in d["runs"]:
         rep = run_dir(runs_dir, study, r["id"]) / "report" / "report.html"
         r["report"] = f"{r['id']}/report/report.html" if rep.exists() else None
-    figs = {"funnel": _b64(funnel_png(d)), "params": _b64(param_maps_png(d)),
-            "map2d": _b64(map2d_png(d))}
+    figs = {"funnel": _b64(funnel_png(d)), "cl_alpha": _b64(cl_alpha_png(d)),
+            "cl_params": _b64(cl_params_png(d))}
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATES),
                              autoescape=jinja2.select_autoescape(["html", "j2"]),
                              undefined=jinja2.StrictUndefined)
     env.filters["fmt"] = fmt
+    env.filters["unit"] = _unit
     return env.get_template("summary.html.j2").render(
         d=d, figs=figs, generated=db.now(), db_file=str(Path(runs_dir) / "runs.db"),
         out_dir=str(out_dir))

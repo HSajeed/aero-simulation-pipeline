@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import math
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -26,6 +27,51 @@ TEMPLATES = ROOT / "templates" / "report"
 GATE_ORDER = ["gate0", "gate1", "gate2", "prod", "gate3"]
 GATE_TITLES = {"gate0": "Gate 0: geometry", "gate1": "Gate 1: mesh", "gate2": "Gate 2: pilot",
                "prod": "Production", "gate3": "Gate 3: plausibility"}
+
+
+LABELS = {  # metric -> readable name (alpha suffix added by label())
+    "cl_std": "CL steadiness (std over last window)", "mass_imbalance": "mass imbalance",
+    "cl_vs_vspaero": "CL vs VSPAERO (relative difference)", "cd": "CD", "cm": "Cm",
+    "converged": "converged", "done": "finished", "iterations": "iterations",
+    "wall_time": "wall time [s]", "cl_alpha_slope": "CL-α slope [/rad]",
+    "cm_alpha_slope": "Cm-α slope [/rad]", "cm_alpha_slope_vspaero": "Cm-α slope, VSPAERO [/rad]",
+    "surfacecheck_finished": "surfaceCheck finished", "closed": "surface closed",
+    "illegal_triangles": "illegal triangles", "self_intersections": "self-intersections",
+    "min_triangle_quality": "min triangle quality", "tip_chord_cells": "cells across tip chord",
+    "n_parts": "parts", "n_zones": "zones", "n_triangles": "triangles", "vspaero_ok": "VSPAERO ran",
+    "shm_finished": "snappyHexMesh finished", "checkmesh_parsed": "checkMesh read",
+    "checkmesh_ok": "checkMesh OK", "negative_volumes": "negative volumes",
+    "closed_boundary": "boundary closed", "cells_max": "cells (max limit)",
+    "cells_min": "cells (min limit)", "max_non_orth": "max non-orthogonality [°]",
+    "max_skewness": "max skewness", "wetted_area_ratio": "wetted area ratio (mesh / STL)",
+    "max_aspect_ratio": "max aspect ratio", "shm_time_s": "snappyHexMesh time [s]",
+    "mesh_wall_time_s": "mesh wall time [s]", "snapped_area_wing": "snapped wing area [m²]",
+    "snapped_area_fuselage": "snapped fuselage area [m²]", "case_setup_ok": "case set up",
+    "potential_init_ok": "potentialFoam init", "solver_completed": "solver finished",
+    "finite_values": "no NaN/inf", "max_abs_coeff": "max |coefficient|",
+    "residual_drop_orders": "residual drop [orders]", "cl_change": "CL change over pilot window",
+    "pilot_Cl": "pilot CL", "pilot_Cd": "pilot CD", "pilot_Cm": "pilot Cm",
+    "s_per_100_iter": "s per 100 iterations", "pilot_wall_time_s": "pilot wall time [s]",
+}
+
+
+def label(metric: str) -> str:
+    m = re.fullmatch(r"alpha_(-?[\d.]+)_(.+)", metric) or re.fullmatch(r"(.+)_a(-?[\d.]+)", metric)
+    if m:
+        a, base = (m[1], m[2]) if metric.startswith("alpha_") else (m[2], m[1])
+        return f"{LABELS.get(base, base.replace('_', ' '))}, α = {a}°"
+    if metric.startswith("residual_drop_"):
+        return f"residual drop {metric[14:]} [orders]" if metric != "residual_drop_orders" \
+            else LABELS[metric]
+    return LABELS.get(metric, metric.replace("_", " "))
+
+
+def limit(m: dict, g3: dict) -> str:
+    """Threshold as shown: the slope check is a range."""
+    if m["metric"] == "cl_alpha_slope" and g3.get("cl_alpha_slope_range"):
+        lo, hi = g3["cl_alpha_slope_range"]
+        return f"{fmt(lo)} – {fmt(hi)}"
+    return fmt(m["threshold"])
 
 
 def fmt(v, digits: int = 4) -> str:
@@ -120,7 +166,6 @@ def render(con, run_id: str, gates_cfg: dict, db_file: str = "runs/runs.db",
         "coefficients": _b64(plots.coefficients(d["history"], d["results"],
                                                 g3.get("coeff_std_window"))),
         "cfd_vs_ref": _b64(plots.cfd_vs_reference(d["results"], d["refs"])),
-        "margins": _b64(plots.gate_margins(latest)),
         "planes": _plane_figs(d, run_path) if run_path else [],
     }
     failed = [m for m in latest if m["severity"] == "gate" and not m["pass"]]
@@ -138,6 +183,8 @@ def render(con, run_id: str, gates_cfg: dict, db_file: str = "runs/runs.db",
                              autoescape=jinja2.select_autoescape(["html", "j2"]),
                              undefined=jinja2.StrictUndefined)
     env.filters["fmt"] = fmt
+    env.filters["label"] = label
+    env.filters["limit"] = lambda m: limit(m, g3)
     return env.get_template("run.html.j2").render(
         d=d, figs=figs, failed=failed, result_rows=rows, codes=[
             c for c in (d["run"]["failure_code"] or "").split(",") if c],

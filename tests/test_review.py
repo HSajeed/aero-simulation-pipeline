@@ -156,19 +156,18 @@ def test_report_pending_run(study, gates_cfg):
     out = html.write_report(con, runs_dir, "baseline-0001", gates_cfg.model_dump(mode="json"))
     s = out.read_text()
     assert out == runs_dir / "baseline" / "baseline-0001" / "report" / "report.html"
-    assert "PENDING" in s and "No results yet" in s and "data:image/png" not in s
+    assert "PENDING" in s and "No results" in s and "data:image/png" not in s
 
 
 def test_report_full_run(study, gates_cfg):
     runs_dir, con = study
     _full_run(con, "baseline-0001")
     s = html.render(con, "baseline-0001", gates_cfg.model_dump(mode="json"))
-    assert s.count("data:image/png;base64,") == 4
+    assert s.count("data:image/png;base64,") == 3                   # CL-alpha, history, residuals
     assert "CL_VS_VSPAERO" in s and "SKEWNESS_HIGH" in s and "mesh.n_smooth_patch" in s
-    assert "0.33" in s and "numerical drag" in s
-    # |0.02 - 0| / max(0, 0.05) = 0.4 and |0.33 - 0.30| / 0.30 = 0.1 from the DB values
-    assert re.search(r">0\.4<", s) and re.search(r">0\.1<", s)
-    assert "1.6×" in s                                             # exceedance 0.4 / 0.25
+    assert "0.33" in s and "CD is numerical" in s
+    assert "CL vs VSPAERO (relative difference), α = 0°" in s      # readable label, not cl_vs_vspaero_a0
+    assert re.search(r">0\.4<", s) and re.search(r">1\.6<", s)     # DB value and exceedance 0.4 / 0.25
 
 
 def test_plots_empty_inputs():
