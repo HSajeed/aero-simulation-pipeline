@@ -1,4 +1,4 @@
-# Phase report — Phases 0–6
+# Phase report — Phases 0–7
 
 ## Phase 0 — environment spike (d4ec268, 2026-11-23)
 
@@ -258,6 +258,57 @@ All 10 flags are qualitatively identical, so this review set has little diversit
   REJECTED, label `separated_flow` (decision V20); every decision is in the `reviews` table.
   Still pending (not part of the acceptance): failure labels for the 11 harsh UNRECOVERABLE runs (P6-6).
 
+## Phase 7 — validation and mesh convergence (2026-11-25)
+Built: `validation.py` (Celik et al. 2008 three-grid GCI with observed order, Richardson extrapolation, two
+cell-size definitions; Helmbold lifting-line CL–α; level choice; DB loaders), `notebook.py` (own notebook writer,
+no Jupyter), `scripts/validation_notebook.py` → **`notebooks/validation.ipynb`**, `scripts/p63_skewness.py`
+(P6-3 experiment), `sampling: points`, mesh settings `domain_cell_size` and `max_boundary_skewness`
+(snappyHexMeshDict override), studies `gci_coarse/medium/fine` (configs/study_gci_*.yaml). 159 tests.
+
+### Mesh convergence (baseline-0007 design point, decisions C1–C3)
+Only the blockMesh base size changes (r = √2); all sHM levels, snapping and solver settings and the domain are the
+same. Scratch dry run of geom + mesh first (E5), then the real runs; 3 levels run concurrently. Log:
+`runs/_logs/gci_*.log`.
+
+| level | base [m] | surface cells [m] | cells | CL(0°) | CL(4°) | CD(4°) | CL–α [/rad] | wall time |
+|---|---|---|---|---|---|---|---|---|
+| coarse | 2.5 | 0.078–0.039 | 98,736 | −0.0460 | 0.2667 | 0.0156 | 4.479 | 10.4 min |
+| medium | 1.768 | 0.055–0.028 | 190,449 | −0.0493 | 0.2694 | 0.0128 | 4.564 | 14.5 min |
+| fine | 1.25 | 0.039–0.020 | 377,136 | −0.0485 | 0.2719 | 0.0110 | 4.590 | 27.4 min |
+
+All CHECKS_PASS, 0 corrections, std(CL) ≤ 3.8e-6, max skewness 3.6–3.8.
+
+| quantity | convergence | p | GCI coarse / medium / fine (h from N; h = base size) |
+|---|---|---|---|
+| CL–α slope | monotone | 5.6; 3.5 | 3.4 / 1.0 / 0.3 %; 3.4 / 1.0 / 0.3 % |
+| CL(4°) | monotone, slow | 0.45; 0.18 | 13 / 12 / 11 %; 21 / 20 / 18 % |
+| CL(0°) | oscillatory | — | — |
+| CD(4°) | monotone | 1.9; 1.1 | 65 / 52 / 40 %; 69 / 58 / 46 % |
+
+The original 3 % rule (C4) picked no level; the human relaxed it (C5) and chose **medium**, frozen into
+`configs/study_baseline.yaml` (C6). Cost reference for Phase 8: ~15 min per run on the medium mesh with 3 cases
+running concurrently.
+
+### CL–α validation
+Richardson CL–α 4.600 /rad vs Helmbold 4.573 and VSPAERO 4.355. Baseline study (coarse mesh): CFD/Helmbold 0.999
+(0.974–1.021), CFD/VSPAERO 1.044 (1.023–1.085). CFD includes the fuselage, both references are wing only.
+
+### Inviscid CD
+CD(4°) decreases with refinement (0.0156 → 0.0110, extrapolated ≈ 0.007) and stays ~2–4× VSPAERO's induced drag
+(0.00365): numerical drag from discretization error at the LE/TE and the faceted surface. Slip walls have no
+friction; CD from v1 is not physical drag.
+
+### P6-3: SKEWNESS_HIGH (decisions C8, C9)
+Root cause: sHM's `maxBoundarySkewness` 20 (OpenFOAM default) vs Gate 1's limit 4. Experiment: 9 harsh failures
+× 9 variants from their initial settings (`runs/_experiments/p63/`, `base` reproduces each original attempt 0
+exactly). Limit 4: 9/9 pass; limit 3: 9/9 (max 2.8–3.0); the old steps 0/9. Regression on the 19 passing
+baseline/harsh runs: 19/19 pass, cells identical, area ratio change ≤ 2e-4. Studies now start at limit 4; the
+correction sequence is limit 3, then `n_smooth_patch` +2. Existing runs are not rerun (history).
+
+### Acceptance
+- `notebooks/validation.ipynb` with GCI table and plots: done (regenerate with `scripts/validation_notebook.py`).
+- Chosen mesh settings written back into study config: done (`configs/study_baseline.yaml`, guarded by a test).
+
 ## Status
-Phases 0–6 done (Phase 6 acceptance met 2026-11-25). Pending human item: failure labels for the
-11 harsh UNRECOVERABLE runs (P6-6). Next: Phase 7 (validation and mesh convergence; includes P6-3).
+Phases 0–7 done (Phase 7 acceptance met 2026-11-25). Pending human item: failure labels for the
+11 harsh UNRECOVERABLE runs (P6-6). Next: Phase 8 (batch study).

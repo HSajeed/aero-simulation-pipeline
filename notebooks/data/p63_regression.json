@@ -1,0 +1,534 @@
+[
+ {
+  "run": "baseline-0001",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 78527,
+  "max_skewness": 3.422454344,
+  "max_non_orth": 47.31908922,
+  "area_ratio": 0.9977340739596635,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 18.87068130100124
+ },
+ {
+  "run": "baseline-0002",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 86098,
+  "max_skewness": 2.482055262,
+  "max_non_orth": 47.24291189,
+  "area_ratio": 0.9984870694803853,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 18.109027002999937
+ },
+ {
+  "run": "baseline-0003",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 116335,
+  "max_skewness": 3.663582593,
+  "max_non_orth": 48.55859279,
+  "area_ratio": 0.998871888085302,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 30.381834185000116
+ },
+ {
+  "run": "baseline-0004",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 117184,
+  "max_skewness": 3.059635563,
+  "max_non_orth": 48.84646428,
+  "area_ratio": 0.9986703710972301,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 34.32124537299933
+ },
+ {
+  "run": "baseline-0005",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 114907,
+  "max_skewness": 3.117608542,
+  "max_non_orth": 47.69268876,
+  "area_ratio": 0.9983914417416119,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 33.64481868599978
+ },
+ {
+  "run": "baseline-0006",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 88313,
+  "max_skewness": 2.020174594,
+  "max_non_orth": 49.75400501,
+  "area_ratio": 0.9983500255730478,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 27.327671484001257
+ },
+ {
+  "run": "baseline-0007",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 97071,
+  "max_skewness": 3.624992462,
+  "max_non_orth": 51.16801528,
+  "area_ratio": 0.998263790604939,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 29.69071461800013
+ },
+ {
+  "run": "baseline-0008",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 130673,
+  "max_skewness": 2.833379185,
+  "max_non_orth": 50.78017086,
+  "area_ratio": 0.9987482016237981,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 42.877084595998895
+ },
+ {
+  "run": "baseline-0009",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 123557,
+  "max_skewness": 2.559443305,
+  "max_non_orth": 48.13676529,
+  "area_ratio": 0.998823552028941,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 37.94882059600059
+ },
+ {
+  "run": "baseline-0010",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 111904,
+  "max_skewness": 3.499487444,
+  "max_non_orth": 47.18114965,
+  "area_ratio": 0.9984622613614956,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 30.180944446001376
+ },
+ {
+  "run": "harsh-0001",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 132963,
+  "max_skewness": 3.592587068,
+  "max_non_orth": 58.56826553,
+  "area_ratio": 0.9986621449081914,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 35.49824109899964
+ },
+ {
+  "run": "harsh-0005",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 93633,
+  "max_skewness": 3.031887573,
+  "max_non_orth": 49.22872479,
+  "area_ratio": 0.9982245238364588,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 23.993672562999564
+ },
+ {
+  "run": "harsh-0006",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 115749,
+  "max_skewness": 3.494621676,
+  "max_non_orth": 48.61482372,
+  "area_ratio": 0.9980213972639637,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 31.507925746000183
+ },
+ {
+  "run": "harsh-0008",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 112776,
+  "max_skewness": 3.016795236,
+  "max_non_orth": 46.63057577,
+  "area_ratio": 0.9988741192048258,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 29.76566544799971
+ },
+ {
+  "run": "harsh-0010",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 88054,
+  "max_skewness": 3.528912189,
+  "max_non_orth": 49.1806031,
+  "area_ratio": 0.9985354036839303,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 21.73521435799921
+ },
+ {
+  "run": "harsh-0015",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 85786,
+  "max_skewness": 3.573579279,
+  "max_non_orth": 51.27857375,
+  "area_ratio": 0.9975020519637614,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 22.883527975000106
+ },
+ {
+  "run": "harsh-0017",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 72666,
+  "max_skewness": 2.904881609,
+  "max_non_orth": 49.36254902,
+  "area_ratio": 0.9977101438153823,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 19.43477775900101
+ },
+ {
+  "run": "harsh-0019",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 103013,
+  "max_skewness": 3.855528923,
+  "max_non_orth": 51.08255947,
+  "area_ratio": 0.9984756696466618,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 28.804059439999037
+ },
+ {
+  "run": "harsh-0020",
+  "variant": "bskew4",
+  "settings": {
+   "max_boundary_skewness": 4.0
+  },
+  "cells": 74290,
+  "max_skewness": 2.493843978,
+  "max_non_orth": 47.66300977,
+  "area_ratio": 0.9978382259126138,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 23.439634918999218
+ },
+ {
+  "run": "baseline-0001",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 78527,
+  "max_skewness": 2.963027884,
+  "max_non_orth": 47.32776687,
+  "area_ratio": 0.9977492061832419,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 25.5009612319991
+ },
+ {
+  "run": "baseline-0002",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 86098,
+  "max_skewness": 2.482055262,
+  "max_non_orth": 47.24291189,
+  "area_ratio": 0.9984870694803853,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 25.751697661000435
+ },
+ {
+  "run": "baseline-0003",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 116335,
+  "max_skewness": 2.945054993,
+  "max_non_orth": 48.55859278,
+  "area_ratio": 0.9988579994248841,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 42.108787105999
+ },
+ {
+  "run": "baseline-0004",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 117184,
+  "max_skewness": 2.971843198,
+  "max_non_orth": 48.84646428,
+  "area_ratio": 0.998678825719755,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 40.36231350900016
+ },
+ {
+  "run": "baseline-0005",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 114907,
+  "max_skewness": 2.995058151,
+  "max_non_orth": 47.69268876,
+  "area_ratio": 0.9983898848523659,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 40.77112674499949
+ },
+ {
+  "run": "baseline-0006",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 88313,
+  "max_skewness": 2.020174588,
+  "max_non_orth": 49.75400501,
+  "area_ratio": 0.9983561284814164,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 33.588433324001016
+ },
+ {
+  "run": "baseline-0007",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 97071,
+  "max_skewness": 2.94946512,
+  "max_non_orth": 51.1680564,
+  "area_ratio": 0.9982132057676616,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 38.20541491699987
+ },
+ {
+  "run": "baseline-0008",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 130673,
+  "max_skewness": 2.833379185,
+  "max_non_orth": 50.78016998,
+  "area_ratio": 0.9987452392534725,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 57.75348055200084
+ },
+ {
+  "run": "baseline-0009",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 123557,
+  "max_skewness": 2.559443305,
+  "max_non_orth": 48.13676529,
+  "area_ratio": 0.9988250442373047,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 50.770673764000094
+ },
+ {
+  "run": "baseline-0010",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 111904,
+  "max_skewness": 2.988506605,
+  "max_non_orth": 47.18114965,
+  "area_ratio": 0.9984589024146528,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 43.728716001000066
+ },
+ {
+  "run": "harsh-0001",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 132963,
+  "max_skewness": 2.955140545,
+  "max_non_orth": 58.35893637,
+  "area_ratio": 0.9986356852841031,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 54.38119845199981
+ },
+ {
+  "run": "harsh-0005",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 93633,
+  "max_skewness": 2.97948393,
+  "max_non_orth": 49.22883778,
+  "area_ratio": 0.9982228691391355,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 37.295173415001045
+ },
+ {
+  "run": "harsh-0006",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 115749,
+  "max_skewness": 2.864785667,
+  "max_non_orth": 48.61502837,
+  "area_ratio": 0.9979929203264918,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 49.77311744800136
+ },
+ {
+  "run": "harsh-0008",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 112776,
+  "max_skewness": 2.712916809,
+  "max_non_orth": 46.63057577,
+  "area_ratio": 0.9988469324543903,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 48.149697802000446
+ },
+ {
+  "run": "harsh-0010",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 88054,
+  "max_skewness": 2.996007417,
+  "max_non_orth": 49.18060303,
+  "area_ratio": 0.998537714282996,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 36.50897048099978
+ },
+ {
+  "run": "harsh-0015",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 85786,
+  "max_skewness": 2.988512077,
+  "max_non_orth": 51.27857375,
+  "area_ratio": 0.9974772000399966,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 35.70829699800015
+ },
+ {
+  "run": "harsh-0017",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 72666,
+  "max_skewness": 2.393966292,
+  "max_non_orth": 49.36254902,
+  "area_ratio": 0.9977096534916926,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 28.92144874800033
+ },
+ {
+  "run": "harsh-0019",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 103013,
+  "max_skewness": 2.96307842,
+  "max_non_orth": 51.08256983,
+  "area_ratio": 0.9984734664756458,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 38.74665257900051
+ },
+ {
+  "run": "harsh-0020",
+  "variant": "bskew3",
+  "settings": {
+   "max_boundary_skewness": 3.0
+  },
+  "cells": 74290,
+  "max_skewness": 2.493843978,
+  "max_non_orth": 47.66300977,
+  "area_ratio": 0.9978382259126138,
+  "gate1_pass": true,
+  "failure_code": null,
+  "wall_time_s": 29.664136073999543
+ }
+]
