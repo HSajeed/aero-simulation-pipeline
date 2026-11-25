@@ -239,12 +239,23 @@ jumping to ~0.25. Consistent with spurious (numerical) separation in the invisci
 e.g. at the sharp leading edge; physics v1 has no viscosity, so this is not a stall prediction.
 All 10 flags are qualitatively identical, so this review set has little diversity.
 
+### Additions after the first review discussion (2026-11-25)
+- **Cutting-plane contours** (V18): `aero sample <study>` (postProcess `surfaces`, cuttingPlane at
+  30 % / 70 % semi-span, U and p, ~1 s per run, no solve); reports show u·e∞/U∞ (reversed flow) and Cp
+  per alpha. All 29 finished runs sampled. At 4° flow is attached; at 20° every high_aoa run shows
+  reversed flow over the whole upper surface from just behind the LE, resolved by fairly coarse cells
+  (~0.1–0.15 m against a 2 m chord).
+- **Failure labels** (V17): `aero review failures <study>`, `aero review label <run> --label L` for
+  UNRECOVERABLE runs (status unchanged).
+- 140 tests (25 in `tests/test_review.py`), new fixture `tests/fixtures/phase6/` (real plane VTK + log).
+
 ### Acceptance
 - Reports: written for all 40 runs (baseline, harsh, high_aoa), including failed runs.
 - Review CLI end to end: verified by tests on a synthetic DB (list ordering, open, decide, bad/missing
   label, double decision, non-flagged refusal, status mirror, report shows the decision).
 - "Review 10 flagged runs end to end": **10 real FLAGGED runs are now in the queue**
-  (`aero review list high_aoa`). **Pending: the human review** (`aero review decide`), decisions.md P6-1.
+  (`aero review list high_aoa`). **Pending: the human review** (`aero review decide`), decisions.md P6-1;
+  also pending: failure labels for the 11 harsh UNRECOVERABLE runs (P6-6).
 
 ## Status
 Phases 0–6 built. Pending for Phase 6 sign-off: the human review of the 10 flagged high_aoa runs

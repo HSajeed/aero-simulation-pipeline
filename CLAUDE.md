@@ -64,8 +64,10 @@ our own code will do.
 ## Code conventions
 - Package: `src/aero/`. CLI: Typer, entry point `aero`. `aero doctor` checks the
   environment (container engine, image, `import openvsp`, paths). `aero report`
-  writes per-run HTML; `aero review list|open|decide` is the Tier 3 queue
-  (labels in `configs/review.yaml`; only FLAGGED runs can be decided).
+  writes per-run HTML (`aero sample` adds report-only cutting-plane contours);
+  `aero review list|open|decide` is the Tier 3 queue (only FLAGGED runs can be
+  decided) and `aero review failures|label` labels UNRECOVERABLE runs (status
+  unchanged); vocabularies in `configs/review.yaml`.
 - Core deps only: openvsp, pydantic, pyyaml, typer, jinja2, numpy, scipy,
   matplotlib (+ pytest). Optional extras: `ml` (pandas, scikit-learn),
   `viz` (pyvista). Ask before adding anything else.
