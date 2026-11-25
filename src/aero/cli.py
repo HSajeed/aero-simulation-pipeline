@@ -187,3 +187,54 @@ def review_decide(run_id: str,
     write_status_mirror(run_dir(runs_dir, row["study"], run_id), row)
     path = _write_reports(con, runs_dir, [run_id], gates)[0]
     typer.echo(f"{run_id}: {row['status']} ({label}); report {path}")
+
+
+@review_app.command("failures")
+def review_failures(study: str, runs_dir: Path = RunsDir):
+    """UNRECOVERABLE runs of a study and their failure label (if any)."""
+    from aero.review import queue
+    con = db.connect(db_path(runs_dir))
+    _study_cfg(con, study)
+    rows = queue.failures(con, study)
+    for r in rows:
+        typer.echo(f"{r['run_id']:<16}{r['failure_code'] or '-':<22}{r['label'] or 'UNLABELLED'}")
+    n = sum(r["label"] is None for r in rows)
+    typer.echo(f"{len(rows)} unrecoverable, {n} unlabelled")
+
+
+@review_app.command("label")
+def review_label(run_id: str,
+                 label: str = typer.Option(..., "--label", help="failure_labels in configs/review.yaml"),
+                 note: Optional[str] = typer.Option(None, "--note"),
+                 reviewer: Optional[str] = typer.Option(None, "--reviewer"),
+                 runs_dir: Path = RunsDir, gates: Path = GatesOpt,
+                 review_config: Path = ReviewOpt):
+    """Label why an UNRECOVERABLE run failed (status unchanged)."""
+    from aero.review import queue
+    con = db.connect(db_path(runs_dir))
+    try:
+        queue.label_failure(con, run_id, label, note, load_review(review_config).failure_labels,
+                            reviewer)
+    except KeyError:
+        typer.echo(f"unknown run: {run_id}", err=True)
+        raise typer.Exit(2)
+    except queue.ReviewError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(2)
+    path = _write_reports(con, runs_dir, [run_id], gates)[0]
+    typer.echo(f"{run_id}: labelled {label} (status UNRECOVERABLE unchanged); report {path}")
+
+
+@app.command()
+def sample(study: str, run_id: Optional[str] = typer.Option(None, "--run"),
+           force: bool = typer.Option(False, "--force"), runs_dir: Path = RunsDir):
+    """Write report-only cutting-plane samples (U, p) for finished runs; no solve."""
+    from aero.foam.sample import sample_run
+    from aero.runner import run_dir
+    con = db.connect(db_path(runs_dir))
+    cfg = _study_cfg(con, study)
+    ids = [run_id] if run_id else [r["id"] for r in db.list_runs(con, study)]
+    for rid in ids:
+        out = sample_run(con, run_dir(runs_dir, study, rid), rid, engine=cfg.container_engine,
+                         image=cfg.image, force=force)
+        typer.echo(f"{rid}  {out['status']}")

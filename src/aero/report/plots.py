@@ -143,3 +143,59 @@ def gate_margins(metrics: list[dict]) -> bytes | None:
                   "(green = pass, red = fail)")
     ax.grid(True, axis="x", alpha=0.3)
     return _png(fig)
+
+
+def section_window(y: float, params: dict, geo: dict) -> tuple[float, float, float, float]:
+    """x/z window around the wing section at spanwise station y (from the design
+    parameters and geometry reference values in the DB)."""
+    b2 = geo["span"] / 2
+    c = geo["root_chord"] * (1 - (1 - params["taper"]) * min(y / b2, 1.0))
+    x_le = geo["x_le_root"] + y * math.tan(math.radians(params["sweep_le"]))
+    zw = -0.2 * geo["fuselage_diameter"]          # WING_Z_FRAC (geom/openvsp_build.py)
+    return x_le - 0.6 * c, x_le + 1.8 * c, zw - 0.8 * c, zw + 0.8 * c
+
+
+def planes(alpha: float, U_inf: float, planes_data: list[tuple[str, float, dict]],
+           params: dict, geo: dict) -> bytes | None:
+    """Cutting-plane contours at one alpha: u along the freestream / U_inf
+    (blue < 0 = reversed flow) and Cp, on the sampled mesh faces (no interpolation).
+    planes_data: [(name, y, parsed_vtk), ...]."""
+    import numpy as np
+    from matplotlib.collections import PolyCollection
+    from matplotlib.colors import TwoSlopeNorm
+
+    if not planes_data:
+        return None
+    a = math.radians(alpha)
+    e = np.array([math.cos(a), 0.0, math.sin(a)])
+    fig, axes = plt.subplots(len(planes_data), 2, figsize=(9.0, 3.0 * len(planes_data)),
+                             squeeze=False)
+    for row, (name, y, d) in enumerate(planes_data):
+        x0, x1, z0, z1 = section_window(y, params, geo)
+        pts = d["points"][:, [0, 2]]
+        polys = [pts[p] for p in d["polygons"]]
+        cen = np.array([q.mean(axis=0) for q in polys])
+        keep = (cen[:, 0] > x0) & (cen[:, 0] < x1) & (cen[:, 1] > z0) & (cen[:, 1] < z1)
+        polys = [q for q, k in zip(polys, keep) if k]
+        us = d["cell"]["U"][keep] @ e / U_inf
+        cp = 2.0 * d["cell"]["p"][keep, 0] / U_inf ** 2       # p kinematic, p_inf = 0
+        for ax, vals, cmap, norm, label in (
+                (axes[row, 0], us, "RdBu_r", TwoSlopeNorm(vmin=-0.5, vcenter=0.0, vmax=1.5),
+                 "u·e∞ / U∞  (blue < 0: reversed flow)"),
+                (axes[row, 1], cp, "viridis",
+                 TwoSlopeNorm(vmin=min(-1e-3, max(-8.0, float(cp.min()))),
+                              vcenter=0.0, vmax=1.0), "Cp")):
+            pc = PolyCollection(polys, array=vals, cmap=cmap, norm=norm, edgecolors="face",
+                                linewidths=0.2)
+            ax.add_collection(pc)
+            ax.set_xlim(x0, x1)
+            ax.set_ylim(z0, z1)
+            ax.set_aspect("equal")
+            ax.set_title(f"{name}: y = {y:.2f} m   {label}", fontsize=8)
+            ax.tick_params(labelsize=7)
+            fig.colorbar(pc, ax=ax, shrink=0.85).ax.tick_params(labelsize=7)
+        axes[row, 0].set_ylabel("z (m)", fontsize=8)
+    for ax in axes[-1]:
+        ax.set_xlabel("x (m)", fontsize=8)
+    fig.suptitle(f"α = {alpha:g}°: final iteration (instantaneous), cutting planes", fontsize=9)
+    return _png(fig)

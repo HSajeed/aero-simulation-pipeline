@@ -83,11 +83,35 @@ def collect(con, run_id: str) -> dict:
     }
 
 
+def _plane_figs(d: dict, run_dir: Path) -> list[tuple[float, str]]:
+    """Cutting-plane contour figures per alpha, from the sampled VTK files (solver
+    output; written by `aero sample`). Empty when not sampled."""
+    from aero.foam.parse import parse_vtk_polydata
+    from aero.foam.sample import plane_files, plane_positions
+    geo = d["geometry"]
+    if not geo:
+        return []
+    gdata = json.loads(geo["data"])
+    U_inf = d["study_cfg"]["freestream"]["U_inf"]
+    ys = dict(plane_positions(gdata["span"]))
+    out = []
+    for a, r in sorted(d["results"].items()):
+        if r.get("end_iter") is None:
+            continue
+        files = plane_files(run_dir / "case", int(r["end_iter"]))
+        data = [(n, ys[n], parse_vtk_polydata(f.read_text())) for n, f in sorted(files.items())]
+        png = plots.planes(a, U_inf, data, d["run"]["params"], gdata)
+        if png:
+            out.append((a, base64.b64encode(png).decode()))
+    return out
+
+
 def _b64(png: bytes | None) -> str | None:
     return base64.b64encode(png).decode() if png else None
 
 
-def render(con, run_id: str, gates_cfg: dict, db_file: str = "runs/runs.db") -> str:
+def render(con, run_id: str, gates_cfg: dict, db_file: str = "runs/runs.db",
+           run_path: Path | None = None) -> str:
     d = collect(con, run_id)
     g3 = gates_cfg.get("gate3", {})
     latest = [m for g in d["gates"] for m in g["latest"]["metrics"]]
@@ -97,6 +121,7 @@ def render(con, run_id: str, gates_cfg: dict, db_file: str = "runs/runs.db") -> 
                                                 g3.get("coeff_std_window"))),
         "cfd_vs_ref": _b64(plots.cfd_vs_reference(d["results"], d["refs"])),
         "margins": _b64(plots.gate_margins(latest)),
+        "planes": _plane_figs(d, run_path) if run_path else [],
     }
     failed = [m for m in latest if m["severity"] == "gate" and not m["pass"]]
     for m in failed:
@@ -123,7 +148,8 @@ def write_report(con, runs_dir: Path, run_id: str, gates_cfg: dict) -> Path:
     row = db.get_run(con, run_id)
     out = run_dir(runs_dir, row["study"], run_id) / "report" / "report.html"
     out.parent.mkdir(parents=True, exist_ok=True)
-    html = render(con, run_id, gates_cfg, db_file=str(Path(runs_dir) / "runs.db"))
+    html = render(con, run_id, gates_cfg, db_file=str(Path(runs_dir) / "runs.db"),
+                  run_path=out.parent.parent)
     tmp = out.with_suffix(".html.tmp")
     tmp.write_text(html)
     tmp.replace(out)

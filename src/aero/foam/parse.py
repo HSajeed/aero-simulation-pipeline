@@ -151,3 +151,48 @@ def parse_solver_log(text: str) -> dict:
 def simple_converged(text: str) -> bool:
     """simpleFoam stopped by residualControl."""
     return bool(re.search(r"SIMPLE solution converged in", text))
+
+
+# ------------------------------------------------------------- sampled planes
+def parse_vtk_polydata(text: str) -> dict:
+    """Legacy ASCII VTK POLYDATA as written by the `surfaces` function object
+    (surfaceFormat vtk, legacy true): points (n,3), polygons (list of index
+    lists) and CELL_DATA fields {name: array (n_cells, n_comp)}."""
+    import numpy as np
+    tok = text.split()
+    i, out = 0, {"points": None, "polygons": [], "cell": {}}
+
+    def take(n):
+        nonlocal i
+        vals = tok[i:i + n]
+        if len(vals) < n:
+            raise ValueError("truncated VTK file")
+        i += n
+        return vals
+
+    while i < len(tok):
+        t = tok[i]
+        if t == "POINTS":
+            n = int(tok[i + 1]); i += 3
+            out["points"] = np.array(take(3 * n), dtype=float).reshape(n, 3)
+        elif t == "POLYGONS":
+            n = int(tok[i + 1]); i += 3
+            polys = []
+            for _ in range(n):
+                k = int(take(1)[0])
+                polys.append([int(v) for v in take(k)])
+            out["polygons"] = polys
+        elif t == "CELL_DATA":
+            ncell = int(tok[i + 1]); i += 2
+            if tok[i] == "FIELD":
+                nf = int(tok[i + 2]); i += 3
+                for _ in range(nf):
+                    name, ncomp, ntup = tok[i], int(tok[i + 1]), int(tok[i + 2]); i += 4
+                    if ntup != ncell:
+                        raise ValueError(f"field {name}: {ntup} tuples for {ncell} cells")
+                    out["cell"][name] = np.array(take(ncomp * ntup), dtype=float).reshape(ntup, ncomp)
+        else:
+            i += 1
+    if out["points"] is None:
+        raise ValueError("no POINTS in VTK file")
+    return out

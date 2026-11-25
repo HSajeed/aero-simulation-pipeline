@@ -1,0 +1,21 @@
+FoamFile { version 2.0; format ascii; class dictionary; object samplePlanes; }
+// Report-only cutting planes (Phase 6). Never read by any gate (rule 4).
+functions
+{
+    planes
+    {
+        type            surfaces;
+        libs            (sampling);
+        writeControl    writeTime;
+        surfaceFormat   vtk;
+        formatOptions   { vtk { format ascii; legacy true; precision 7; } }
+        fields          (U p);
+        interpolationScheme cell;
+        surfaces
+        {
+{% for name, y in planes %}
+            {{ name }} { type cuttingPlane; point (0 {{ "%.6g"|format(y) }} 0); normal (0 1 0); interpolate false; }
+{% endfor %}
+        }
+    }
+}

@@ -213,3 +213,137 @@ def test_review_cli(study):
     assert "baseline-0001" not in r.output and "1 flagged" in r.output
     r = cli.invoke(app, ["review", "open", "nope", *rd])
     assert r.exit_code == 2
+
+
+# ------------------------------------------------------------------ failure labels (V15)
+FAIL_LABELS = load_review(ROOT / "configs/review.yaml").failure_labels
+
+
+def _unrecoverable(con, rid, code="SKEWNESS_HIGH"):
+    con.execute("UPDATE runs SET status=?, failure_code=? WHERE id=?",
+                (Status.UNRECOVERABLE, code, rid))
+
+
+def test_label_failure(study):
+    _, con = study
+    _unrecoverable(con, "baseline-0001")
+    queue.label_failure(con, "baseline-0001", "mesher_limitation", None, FAIL_LABELS, "me")
+    row = db.get_run(con, "baseline-0001")
+    assert row["status"] == Status.UNRECOVERABLE and row["failure_code"] == "SKEWNESS_HIGH"
+    (rv,) = queue.reviews_for(con, "baseline-0001")
+    assert (rv["decision"], rv["label"], rv["reviewer"]) == ("label", "mesher_limitation", "me")
+    with pytest.raises(queue.ReviewError, match="already has"):
+        queue.label_failure(con, "baseline-0001", "design_infeasible", None, FAIL_LABELS)
+    assert len(queue.reviews_for(con, "baseline-0001")) == 1
+
+
+@pytest.mark.parametrize("status,label,note,msg", [
+    ("UNRECOVERABLE", "ok_false_alarm", None, "failure vocabulary"),   # flagged-run label
+    ("UNRECOVERABLE", "other", None, "requires --note"),
+    ("FLAGGED", "mesher_limitation", None, "only UNRECOVERABLE"),
+    ("CHECKS_PASS", "mesher_limitation", None, "only UNRECOVERABLE")])
+def test_label_failure_refused(study, status, label, note, msg):
+    _, con = study
+    con.execute("UPDATE runs SET status=? WHERE id='baseline-0001'", (status,))
+    with pytest.raises(queue.ReviewError, match=msg):
+        queue.label_failure(con, "baseline-0001", label, note, FAIL_LABELS)
+    assert queue.reviews_for(con, "baseline-0001") == []
+
+
+def test_decide_refuses_unrecoverable(study):
+    _, con = study
+    _unrecoverable(con, "baseline-0001")
+    with pytest.raises(queue.ReviewError, match="not FLAGGED"):
+        queue.decide(con, "baseline-0001", True, "ok_false_alarm", None, LABELS)
+
+
+def test_failures_cli(study):
+    runs_dir, con = study
+    _unrecoverable(con, "baseline-0001")
+    _unrecoverable(con, "baseline-0002", "FEATURE_TOO_SMALL")
+    rd = ["--runs-dir", str(runs_dir)]
+    r = cli.invoke(app, ["review", "failures", "baseline", *rd])
+    assert r.exit_code == 0 and "2 unrecoverable, 2 unlabelled" in r.output
+    r = cli.invoke(app, ["review", "label", "baseline-0002", "--label", "design_infeasible",
+                         "--note", "tip chord 0.33 m", *rd,
+                         "--gates", str(ROOT / "configs/gates.yaml"),
+                         "--review-config", str(ROOT / "configs/review.yaml")])
+    assert r.exit_code == 0 and "UNRECOVERABLE unchanged" in r.output, r.output
+    rep = (runs_dir / "baseline" / "baseline-0002" / "report" / "report.html").read_text()
+    assert "design_infeasible" in rep and "tip chord 0.33 m" in rep
+    r = cli.invoke(app, ["review", "failures", "baseline", *rd])
+    assert "design_infeasible" in r.output and "2 unrecoverable, 1 unlabelled" in r.output
+    r = cli.invoke(app, ["review", "label", "baseline-0003", "--label", "mesher_limitation", *rd])
+    assert r.exit_code == 2                                          # PENDING
+
+
+# ------------------------------------------------------------------ cutting planes
+PLANE = ROOT / "tests/fixtures/phase6/plane_y70_t2401.vtk"
+
+
+def test_parse_vtk_polydata():
+    from aero.foam.parse import parse_vtk_polydata
+    d = parse_vtk_polydata(PLANE.read_text())
+    assert d["points"].shape == (3495, 3) and len(d["polygons"]) == 3231
+    assert d["cell"]["U"].shape == (3231, 3) and d["cell"]["p"].shape == (3231, 1)
+    assert set(d["points"][:, 1].round(2)) == {4.39}                  # plane y = 4.39
+    # farfield-ish cell: U = 10 (cos 20, 0, sin 20)
+    assert d["cell"]["U"][0] == pytest.approx([9.3966, 0.0, 3.4193], abs=1e-3)
+    with pytest.raises(ValueError):
+        parse_vtk_polydata("# vtk DataFile\nASCII\nDATASET POLYDATA\n")
+    with pytest.raises(ValueError, match="truncated"):
+        parse_vtk_polydata(PLANE.read_text()[:5000])
+
+
+def test_sample_log_fixture_clean():
+    log = (ROOT / "tests/fixtures/phase6/log.sample").read_text()
+    assert "FOAM Warning" not in log and log.rstrip().endswith("End")
+
+
+GEO = {"span": 12.54, "root_chord": 2.0, "x_le_root": 3.5, "fuselage_diameter": 1.648}
+PRM = {"taper": 0.797, "sweep_le": 5.17}
+
+
+def test_section_window_and_planes_plot():
+    from aero.foam.parse import parse_vtk_polydata
+    x0, x1, z0, z1 = plots.section_window(4.39, PRM, GEO)
+    c = 2.0 * (1 - (1 - 0.797) * 4.39 / 6.27)
+    assert x0 == pytest.approx(3.5 + 4.39 * math.tan(math.radians(5.17)) - 0.6 * c)
+    assert (z0 + z1) / 2 == pytest.approx(-0.2 * 1.648)
+    png = plots.planes(20.0, 10.0, [("y70", 4.39, parse_vtk_polydata(PLANE.read_text()))],
+                       PRM, GEO)
+    assert png.startswith(b"\x89PNG")
+    assert plots.planes(20.0, 10.0, [], PRM, GEO) is None
+
+
+def test_sample_run(study, monkeypatch):
+    from aero.foam import sample
+    runs_dir, con = study
+    rid, rdir = "baseline-0001", runs_dir / "baseline" / "baseline-0001"
+    assert sample.sample_run(con, rdir, rid)["status"] == "no_results"
+    _full_run(con, rid)                       # end_iter 400 (alpha 0) and 800 (alpha 4)
+    db.put_geometry(con, rid, {"sref_full": 1, "sref_half": .5, "span": 10.0, "mac": 1,
+                               "x_ref": 1, "tip_chord": 1})
+    (rdir / "case" / "system").mkdir(parents=True)
+    for t in (400, 800):
+        (rdir / "case" / str(t)).mkdir()
+    calls = []
+
+    def fake_run(case, body, name, **kw):
+        calls.append(body)
+        for t in (400, 800):
+            d = case / "postProcessing" / "planes" / str(t)
+            d.mkdir(parents=True, exist_ok=True)
+            for n in ("y30", "y70"):
+                (d / f"{n}.vtk").write_text("x")
+        from aero.foam.container import ContainerResult
+        return ContainerResult(0, case / "log.sample", case / "sample.sh", 0.1)
+
+    monkeypatch.setattr(sample, "run_script", fake_run)
+    assert sample.sample_run(con, rdir, rid)["status"] == "sampled"
+    assert "-time '400,800'" in calls[0] and "-fields '(U p)'" in calls[0]
+    d = (rdir / "case" / "system" / "samplePlanes").read_text()
+    assert "point (0 1.5 0)" in d and "point (0 3.5 0)" in d          # 30 / 70 % of 5 m
+    assert sample.sample_run(con, rdir, rid)["status"] == "skipped"   # idempotent
+    assert len(calls) == 1
+    assert sample.sample_run(con, rdir, rid, force=True)["status"] == "sampled"

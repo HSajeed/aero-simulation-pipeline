@@ -116,6 +116,14 @@ CL/CD/Cm = mean over the last {{ gates_cfg.gate3.coeff_std_window|fmt }} iterati
 {% if figs.coefficients %}<img alt="CL and CD history" src="data:image/png;base64,{{ figs.coefficients }}">{% endif %}
 {% endif %}
 
+{% if figs.planes %}
+<h2>Flow field: cutting planes</h2>
+<p class="muted">Spanwise planes at 30 % and 70 % semi-span, cell values of the final iteration of each α
+(instantaneous: an oscillating solution is shown at one moment). Left: velocity along the freestream
+direction / U∞, blue = reversed flow. Right: Cp. For review only; no gate reads these.</p>
+{% for a, img in figs.planes %}<img alt="Cutting planes at alpha {{ a|fmt }}" src="data:image/png;base64,{{ img }}">{% endfor %}
+{% endif %}
+
 <h2>Gate metrics vs thresholds</h2>
 {% if figs.margins %}<img alt="Gate margins" src="data:image/png;base64,{{ figs.margins }}">{% endif %}
 {% for g in d.gates %}
