@@ -1,0 +1,79 @@
+# Phase 10 demo (make demo-batch): copy of study_batch.yaml (harsh ranges, alpha 6/10) with
+# n = 10 (same seed; LHS with n = 10 gives different points than n = 25). Expect some runs FLAGGED for human review.
+# Phase 8 batch study (human decisions 2026-11-25): harsh parameter ranges (as
+# study_harsh.yaml), n = 25 (B1), alphas 6/10 deg (B5, after the 14 deg probe),
+# mesh = frozen Phase 7 GCI medium level. Physics, freestream and solver
+# settings as study_baseline.yaml.
+name: demo-batch
+
+physics:              # v1, fixed (CLAUDE.md). Only these values validate.
+  solver: simpleFoam
+  flow: incompressible_steady
+  model: laminar
+  wall_bc: slip
+  symmetry: half_model_y0
+  farfield: freestream
+
+parameters:           # confirmed 2026-11-23 ("wide")
+  - {name: span,              low: 6.0,  high: 18.0, unit: m}     # full span
+  - {name: sweep_le,          low: 0.0,  high: 40.0, unit: deg}
+  - {name: taper,             low: 0.15, high: 1.0,  unit: "-"}   # c_tip / c_root
+  - {name: twist_tip,         low: 0.0,  high: 8.0,  unit: deg}   # washout, positive = nose down
+  - {name: fuselage_fineness, low: 5.0,  high: 12.0, unit: "-"}   # length / diameter
+
+sampling: {method: lhs, n: 10, seed: 42}
+
+geometry:             # fixed values (smoke-test geometry)
+  root_chord: 2.0         # m
+  fuselage_length: 10.0   # m
+
+freestream:           # confirmed 2026-11-23
+  U_inf: 10.0         # m/s
+  nu: 1.0e-5          # m^2/s ("small viscosity" inviscid approximation)
+  rho_inf: 1.0        # fixed: forceCoeffs rho rhoInf; rhoInf 1
+
+alphas: [6.0, 10.0]   # deg, human 2026-11-25 after the 14 deg probe (B5); pilot / Gate 2 at 6 deg
+
+tessellation:         # numerical (may be auto-refined); Phase 0 smoke values
+  fus_tess_u: 33
+  fus_tess_w: 33
+  wing_tess_w: 41
+  wing_sect_tess_u: 25
+
+mesh:                 # numerical
+  # Phase 7 frozen batch mesh = GCI "medium" level (human decision 2026-11-25,
+  # notebooks/validation.ipynb): CL-alpha GCI 1.0 %, CL(4) change to fine 0.93 %.
+  # The baseline study's own runs used base_cell_size 2.5 and the sHM default
+  # boundary skewness 20 (their frozen configs in runs/ and the DB are the record).
+  base_cell_size: 1.767767  # 2.5 / sqrt(2)
+  domain_cell_size: 2.5     # same domain as the GCI levels
+  max_boundary_skewness: 4.0  # P6-3: sHM boundary limit = Gate 1 skewness limit
+  surface_level: [5, 6]
+  feature_level: 6
+  near_body_level: 3
+  n_cells_between_levels: 3
+  upstream_chords: 15       # domain, root chords from body bbox (PLAN: >= 15)
+  downstream_chords: 25     # PLAN: >= 25
+  lateral_chords: 15
+  vertical_chords: 15
+  wake_level: 3             # wake refinement box behind the wing
+  wake_length_chords: 5
+  included_angle: 150       # surfaceFeatureExtract
+  resolve_feature_angle: 30
+  n_smooth_patch: 3         # snapControls
+  snap_tolerance: 2.0
+  n_solve_iter: 50
+  n_relax_iter: 5
+  n_feature_snap_iter: 10
+  max_local_cells: 2000000
+  max_global_cells: 4000000
+
+solver:               # numerical
+  pilot_iterations: 300     # PLAN.md
+  max_iterations: 2000      # confirmed
+  residual_target: 1.0e-5   # confirmed
+  relax_U: 0.7              # confirmed
+  relax_p: 0.3              # confirmed
+
+workers: 4            # confirmed: concurrent single-core cases (6 cores / 14 GB)
+container_engine: podman

@@ -339,7 +339,36 @@ end to end, unattended until review) met.
   the summary's "Pipeline stats" section; CL maps over the parameter space: CL vs α and CL vs each parameter
   (CD maps deferred, B7).
 
+## Phase 10 — packaging (2026-11-25)
+Built: `Containerfile` (Python side: Ubuntu 26.04 + OpenVSP 3.57.0 `.deb` from `vendor/` + venv; drives the host's
+Podman through its socket, decision K1), `Makefile` (`image`, `socket`, `doctor`, `test`, `demo-baseline`,
+`demo-batch`, K2), `.github/workflows/tests.yml` (K5), `README.md` (problem, architecture diagram, gates table,
+review loop, Phase 7/8 results with figures in `docs/figures/`, run instructions, limitations, next steps,
+authorship statement K6), `configs/study_demo_{baseline,batch}.yaml`.
+
+### Checks
+| check | result |
+|---|---|
+| `make image` | builds (needed `desktop-file-utils` for the `.deb` postinst) |
+| `make doctor` (in the image) | all ok: Python 3.14.4, OpenVSP 3.57.0, vspaero, podman via socket, pinned OpenFOAM image |
+| `make test` (in the image) | 166 passed, incl. the 4 real OpenVSP/OpenFOAM integration tests (pytest temp inside the repo, K4) |
+| clean venv, no OpenVSP, failing `podman` (CI conditions) | 162 passed, 4 skipped |
+| `make demo-baseline` | started in the image, stopped by the human's instruction ("we just need to know they work") after 4 runs passed Gate 0 and Gate 1 and their pilots had started; no failure or correction recorded by the stop |
+| `make demo-batch` | same: 2 MESH_OK, 2 GEOM_OK, 1 genuine Gate 0 stop (demo-batch-0001, taper 0.16 on 6.3 m span: 11.7 < 12 cells across the tip chord, FEATURE_TOO_SMALL, no auto-correction by design) |
+| `aero summary <demo> --reports` (in the image) | both summaries and reports written |
+
+Pilot, production and Gate 3 were not run to completion inside the image by the demos; the solver path through the
+socket is exercised by the in-image integration tests (pilot with a broken case), and production uses the same
+container call. Both demo studies are left resumable: `make demo-baseline` / `make demo-batch` continue them.
+
+### Acceptance
+- Containerfile for the Python side; `make demo` runs a 10-variant study end to end: two demo targets, started and
+  verified through Gates 0–1 (and the pilot start) in the image; not run to the end, by the human's choice.
+- README with problem, architecture diagram, gates table, headline figure, review loop, limitations, next steps: done.
+- GitHub Actions unit tests (no CFD): workflow added and verified locally under CI conditions; no remote yet, so
+  not run on GitHub.
+
 ## Status
-Phases 0–8 done (Phase 8 acceptance met 2026-11-25). Pending human item: failure labels for the
+Phases 0–8 and 10 done (2026-11-25); Phase 9 deferred (B9). Pending human item: failure labels for the
 11 harsh UNRECOVERABLE runs (P6-6). Phase 9 (ML) deferred to future work by the human (B9): it needs
 unsteady and/or viscous simulations first so that flags and review labels are physically correct.

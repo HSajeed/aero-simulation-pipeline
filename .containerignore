@@ -1,0 +1,6 @@
+*
+!pyproject.toml
+!src/
+!templates/
+!vendor/*.deb
+**/__pycache__
