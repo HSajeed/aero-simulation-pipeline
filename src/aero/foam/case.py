@@ -4,7 +4,8 @@ Mesh domain (half model, y >= 0), all in root chords c from the body bbox:
   x: [xmin - upstream*c, xmax + downstream*c]
   y: [0, ymax + lateral*c]
   z: [zmin - vertical*c, zmax + vertical*c]
-extents rounded up to whole background cells. Refinement boxes:
+extents rounded up to whole background cells (of domain_cell_size if set, so
+meshes of different base size share one domain). Refinement boxes:
   nearBody: body bbox (y >= 0) grown by 0.5 c
   wake:     wing root TE -> xmax + wake_length*c, y to tip + 0.25 c,
             z around the wing, opened upward by tan(max alpha) (wake follows U)
@@ -44,9 +45,14 @@ def mesh_layout(geom: dict, mesh: dict, alphas: list[float]) -> dict:
     (bx0, _, bz0), (bx1, by1, bz1) = geom["stl_bbox"]
     c, h = geom["root_chord"], mesh["base_cell_size"]
 
+    ref = mesh.get("domain_cell_size") or h
+
     def axis(lo, hi):
-        n = math.ceil((hi - lo) / h)
-        return _r(lo), _r(lo + n * h), n
+        # extent in whole `ref` cells; with domain_cell_size set, meshes of any
+        # base size share this domain (cells may deviate from cubes by < 1/(2n))
+        length = math.ceil((hi - lo) / ref) * ref
+        n = max(1, round(length / h))
+        return _r(lo), _r(lo + length), n
 
     x0, x1, nx = axis(bx0 - mesh["upstream_chords"] * c, bx1 + mesh["downstream_chords"] * c)
     y0, y1, ny = axis(0.0, by1 + mesh["lateral_chords"] * c)

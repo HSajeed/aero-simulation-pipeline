@@ -47,7 +47,9 @@ def write_status_mirror(rdir: Path, row) -> None:
 
 # --------------------------------------------------------------- sampling
 def sample(cfg: StudyConfig) -> list[dict[str, float]]:
-    """Latin hypercube over the parameter ranges, fixed seed."""
+    """Latin hypercube over the parameter ranges (fixed seed), or explicit points."""
+    if cfg.sampling.method == "points":
+        return [{p.name: float(pt[p.name]) for p in cfg.parameters} for pt in cfg.sampling.points]
     lo = np.array([p.low for p in cfg.parameters])
     hi = np.array([p.high for p in cfg.parameters])
     unit = qmc.LatinHypercube(d=len(lo), seed=cfg.sampling.seed).random(cfg.sampling.n)

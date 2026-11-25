@@ -44,9 +44,20 @@ class Parameter(_Strict):
 
 
 class Sampling(_Strict):
-    method: Literal["lhs"] = "lhs"
+    """lhs: Latin hypercube (n points, seed). points: explicit design points
+    (Phase 7, e.g. one variant meshed at several resolutions); n = len(points)."""
+    method: Literal["lhs", "points"] = "lhs"
     n: int = Field(gt=0)
-    seed: int
+    seed: int | None = None
+    points: list[dict[str, float]] | None = None
+
+    @model_validator(mode="after")
+    def _method(self):
+        if self.method == "lhs" and (self.seed is None or self.points is not None):
+            raise ValueError("lhs sampling needs a seed and no points")
+        if self.method == "points" and (not self.points or len(self.points) != self.n):
+            raise ValueError("points sampling needs n == len(points)")
+        return self
 
 
 class Freestream(_Strict):
@@ -95,6 +106,14 @@ class MeshSettings(_Strict):
     n_solve_iter: int = Field(50, ge=1)
     n_relax_iter: int = Field(5, ge=1)
     n_feature_snap_iter: int = Field(10, ge=1)
+    # snappyHexMesh meshQualityControls override (Phase 7, P6-3). The default 20
+    # is the value of OpenFOAM's meshQualityDict.cfg, i.e. Phase 3-6 behaviour;
+    # checkMesh / Gate 1 fail above max_skewness (4).
+    max_boundary_skewness: float = Field(20.0, gt=0)
+    # Phase 7 (GCI): round the domain extents to multiples of this size instead
+    # of base_cell_size, so meshes with different base sizes share one domain.
+    # None = Phase 3-6 behaviour (extents in whole base cells).
+    domain_cell_size: float | None = Field(None, gt=0)
     max_local_cells: int = Field(2_000_000, gt=0)
     max_global_cells: int = Field(4_000_000, gt=0)
 
@@ -132,6 +151,12 @@ class StudyConfig(_Strict):
         names = [p.name for p in self.parameters]
         if len(names) != len(set(names)):
             raise ValueError("duplicate parameter names")
+        for pt in self.sampling.points or []:
+            if set(pt) != set(names):
+                raise ValueError(f"design point keys {sorted(pt)} != parameters {sorted(names)}")
+            for p in self.parameters:
+                if not p.low <= pt[p.name] <= p.high:
+                    raise ValueError(f"design point {p.name}={pt[p.name]} outside [{p.low}, {p.high}]")
         return self
 
 

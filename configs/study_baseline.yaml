@@ -1,4 +1,5 @@
-# Baseline study. Physics, ranges, mesh and solver values confirmed 2026-11-23.
+# Baseline study. Physics, ranges, mesh and solver values confirmed 2026-11-23;
+# mesh frozen from the Phase 7 GCI study (2026-11-25).
 name: baseline
 
 physics:              # v1, fixed (CLAUDE.md). Only these values validate.
@@ -35,8 +36,14 @@ tessellation:         # numerical (may be auto-refined); Phase 0 smoke values
   wing_tess_w: 41
   wing_sect_tess_u: 25
 
-mesh:                 # numerical; from the Phase 0 smoke run (114k cells, Mesh OK)
-  base_cell_size: 2.5
+mesh:                 # numerical
+  # Phase 7 frozen batch mesh = GCI "medium" level (human decision 2026-11-25,
+  # notebooks/validation.ipynb): CL-alpha GCI 1.0 %, CL(4) change to fine 0.93 %.
+  # The baseline study's own runs used base_cell_size 2.5 and the sHM default
+  # boundary skewness 20 (their frozen configs in runs/ and the DB are the record).
+  base_cell_size: 1.767767  # 2.5 / sqrt(2)
+  domain_cell_size: 2.5     # same domain as the GCI levels
+  max_boundary_skewness: 4.0  # P6-3: sHM boundary limit = Gate 1 skewness limit
   surface_level: [5, 6]
   feature_level: 6
   near_body_level: 3

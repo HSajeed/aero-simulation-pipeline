@@ -23,7 +23,14 @@ gate1:
     - {action: add, param: mesh.n_smooth_patch,         by: 2}
     - {action: add, param: mesh.n_cells_between_levels, by: 1}
     - {action: add, param: mesh.n_relax_iter,           by: 5}
-  SKEWNESS_HIGH: *quality
+  # P6-3 (Phase 7 experiment, notebooks/validation.ipynb): sHM's default
+  # maxBoundarySkewness 20 let snapped boundary faces through that checkMesh
+  # rejects (> 4). Limit 4 fixed 9/9 harsh failures, limit 3 9/9 with margin;
+  # n_cells_between_levels / n_relax_iter changed nothing (0/9) and were dropped.
+  # Studies now start at max_boundary_skewness 4 (study config).
+  SKEWNESS_HIGH:
+    - {action: set, param: mesh.max_boundary_skewness, value: 3.0}
+    - {action: add, param: mesh.n_smooth_patch,        by: 2}
   NEGATIVE_VOLUMES: *quality
   # SHM_FAILED, CHECKMESH_FAILED, OPEN_BOUNDARY: no auto-correction
 

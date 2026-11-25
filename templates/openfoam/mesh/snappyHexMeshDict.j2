@@ -66,6 +66,7 @@ addLayersControls
 meshQualityControls
 {
     #includeEtc "caseDicts/mesh/generation/meshQualityDict.cfg"
+    maxBoundarySkewness {{ m.max_boundary_skewness }};   // .cfg default 20; Gate 1 limit 4
 }
 
 mergeTolerance 1e-6;

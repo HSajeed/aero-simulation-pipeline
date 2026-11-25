@@ -1,0 +1,78 @@
+# Phase 7 GCI study, coarse level (human decisions 2026-11-25): design point of run
+# baseline-0007 (exact parameters from the DB), meshed at three levels that differ ONLY
+# in mesh.base_cell_size (2.5 / 2.5/sqrt(2) / 1.25 m, r = sqrt(2)); every sHM level is
+# the same. Shared domain via domain_cell_size. max_boundary_skewness 4 = P6-3 setting.
+# Everything else identical to study_baseline.yaml (as the baseline runs used it).
+name: gci_coarse
+
+physics:              # v1, fixed (CLAUDE.md). Only these values validate.
+  solver: simpleFoam
+  flow: incompressible_steady
+  model: laminar
+  wall_bc: slip
+  symmetry: half_model_y0
+  farfield: freestream
+
+parameters:           # confirmed 2026-11-23
+  - {name: span,              low: 8.0,  high: 14.0, unit: m}     # full span
+  - {name: sweep_le,          low: 0.0,  high: 10.0, unit: deg}
+  - {name: taper,             low: 0.25, high: 1.0,  unit: "-"}   # c_tip / c_root
+  - {name: twist_tip,         low: 0.0,  high: 4.0,  unit: deg}   # washout, positive = nose down
+  - {name: fuselage_fineness, low: 6.0,  high: 10.0, unit: "-"}   # length / diameter
+
+sampling:
+  method: points
+  n: 1
+  points:
+    - {span: 9.95314270645531, sweep_le: 1.03249026756579, taper: 0.6005630981396386, twist_tip: 1.8518161175860524, fuselage_fineness: 8.212177675489677}   # = baseline-0007
+
+geometry:             # fixed values (smoke-test geometry)
+  root_chord: 2.0         # m
+  fuselage_length: 10.0   # m
+
+freestream:           # confirmed 2026-11-23
+  U_inf: 10.0         # m/s
+  nu: 1.0e-5          # m^2/s ("small viscosity" inviscid approximation)
+  rho_inf: 1.0        # fixed: forceCoeffs rho rhoInf; rhoInf 1
+
+alphas: [0.0, 4.0]    # deg (PLAN.md example)
+
+tessellation:         # numerical (may be auto-refined); Phase 0 smoke values
+  fus_tess_u: 33
+  fus_tess_w: 33
+  wing_tess_w: 41
+  wing_sect_tess_u: 25
+
+mesh:                 # numerical; from the Phase 0 smoke run (114k cells, Mesh OK)
+  base_cell_size: 2.5       # GCI coarse level
+  domain_cell_size: 2.5     # same domain on all three levels
+  max_boundary_skewness: 4.0   # P6-3 (sHM default 20)
+  surface_level: [5, 6]
+  feature_level: 6
+  near_body_level: 3
+  n_cells_between_levels: 3
+  upstream_chords: 15       # domain, root chords from body bbox (PLAN: >= 15)
+  downstream_chords: 25     # PLAN: >= 25
+  lateral_chords: 15
+  vertical_chords: 15
+  wake_level: 3             # wake refinement box behind the wing
+  wake_length_chords: 5
+  included_angle: 150       # surfaceFeatureExtract
+  resolve_feature_angle: 30
+  n_smooth_patch: 3         # snapControls
+  snap_tolerance: 2.0
+  n_solve_iter: 50
+  n_relax_iter: 5
+  n_feature_snap_iter: 10
+  max_local_cells: 2000000
+  max_global_cells: 4000000
+
+solver:               # numerical
+  pilot_iterations: 300     # PLAN.md
+  max_iterations: 2000      # confirmed
+  residual_target: 1.0e-5   # confirmed
+  relax_U: 0.7              # confirmed
+  relax_p: 0.3              # confirmed
+
+workers: 1            # confirmed: concurrent single-core cases (6 cores / 14 GB)
+container_engine: podman
