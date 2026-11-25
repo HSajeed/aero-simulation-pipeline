@@ -209,14 +209,43 @@ Converged runs (9): CL vs VSPAERO floored difference 0.002–0.047 at α = 0 and
 (limit 0.25; worst run 0006, washout 7.9°); CL–alpha slope 3.72–5.04 /rad; std(CL) <= 2.6e-5;
 mass imbalance <= 1.1e-8; CD 0.0058–0.019 (numerical drag).
 
+### High-AoA study (to produce flagged runs, decision P6-5)
+`configs/study_high_aoa.yaml`: the baseline design points (same ranges, seed 42, n = 10) at alphas
+**4° and 20°** (pilot / Gate 2 at 4°). Scratch trial of one variant first (E5), then the real run:
+started 2026-11-24, paused by the user after 2 runs and resumed 2026-11-25 (`aero run high_aoa`;
+runner killed before the containers, so no false PROD_FAIL; the interrupted 20° legs of 0003–0006
+restarted from the stored 4° solution). Log: `runs/_logs/high_aoa_run.log`.
+
+Outcome: **10/10 FLAGGED**, every run for the same three reasons
+(COEFF_NOT_CONVERGED, CL_VS_VSPAERO, CL_ALPHA_SLOPE). No geometry, mesh, pilot or production failures;
+2 mesh corrections (SKEWNESS_HIGH, `n_smooth_patch` 3 -> 5, runs 0003 and 0007). Cells 88.6k–146k.
+
+| Metric | 4° | 20° |
+|---|---|---|
+| CL CFD | 0.194–0.324 | 0.651–0.815 |
+| CL VSPAERO (linear VLM, wing only) | 0.181–0.303 | 1.33–1.65 |
+| CL vs VSPAERO (floored, limit 0.25) | 0.007–0.082 (pass) | 0.46–0.58 (flag) |
+| std(CL), last 200 its (limit 1e-3) | 2e-6–3.5e-5 (pass) | 0.017–0.043 (flag) |
+| CD (numerical) | 0.011–0.018 | 0.23–0.27 |
+| Iterations | 401 | 2000 (max, residual target not met) |
+| Mass imbalance | | <= 1.6e-6 (pass) |
+
+CL–alpha slope (4°–20°): 1.17–1.91 /rad (band 3.0–6.0, flag). Wall time of the 20° leg: 14–27 min
+per run with 4 concurrent cases.
+
+Observation (for the reviewer, not a conclusion): in every run the 20° leg first reaches CL ≈ 1.5
+(close to the linear VLM) within ~50 iterations, then collapses to CL ≈ 0.7 and oscillates, with CD
+jumping to ~0.25. Consistent with spurious (numerical) separation in the inviscid slip-wall solver,
+e.g. at the sharp leading edge; physics v1 has no viscosity, so this is not a stall prediction.
+All 10 flags are qualitatively identical, so this review set has little diversity.
+
 ### Acceptance
-- Reports: written for all 30 runs (baseline + harsh), including failed runs.
+- Reports: written for all 40 runs (baseline, harsh, high_aoa), including failed runs.
 - Review CLI end to end: verified by tests on a synthetic DB (list ordering, open, decide, bad/missing
   label, double decision, non-flagged refusal, status mirror, report shows the decision).
-- **Not met: "review 10 flagged runs end to end".** 0 of 19 converged runs (baseline + harsh) were
-  flagged, so there is nothing real to review. Pending human decision (decisions.md, P6-1); planned
-  route: high-AoA study (P6-5, pending run).
+- "Review 10 flagged runs end to end": **10 real FLAGGED runs are now in the queue**
+  (`aero review list high_aoa`). **Pending: the human review** (`aero review decide`), decisions.md P6-1.
 
 ## Status
-Phases 0–6 built; the Phase 6 real-run review acceptance is pending (decisions.md, "Pending decisions").
-Next: Phase 7 (validation and mesh convergence).
+Phases 0–6 built. Pending for Phase 6 sign-off: the human review of the 10 flagged high_aoa runs
+(decisions.md, "Pending decisions"). Next: Phase 7 (validation and mesh convergence).
