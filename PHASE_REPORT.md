@@ -309,6 +309,36 @@ correction sequence is limit 3, then `n_smooth_patch` +2. Existing runs are not 
 - `notebooks/validation.ipynb` with GCI table and plots: done (regenerate with `scripts/validation_notebook.py`).
 - Chosen mesh settings written back into study config: done (`configs/study_baseline.yaml`, guarded by a test).
 
+## Phase 8 — batch study (2026-11-25)
+Built: per-run `flock` (B2), automatic cutting-plane sampling before Gate 3 (B3), `aero summary <study> [--reports]`
+(B4, layout B7), `sampling: points`. Study `configs/study_batch.yaml`: 25 LHS variants over the harsh ranges (B1, B5),
+α 6°/10° (B6, after a 14° probe), frozen medium mesh (C6), 4 concurrent single-core cases. 166 tests.
+
+### Run (one command: `aero run batch`, 14:43 → 18:51, 4 h 08 min elapsed, 15.2 h summed single-core)
+| step | passed | after auto-correction |
+|---|---|---|
+| Gate 0 geometry | 25 | 0 |
+| Gate 1 mesh | 25 | 0 |
+| Gate 2 pilot | 25 | 1 (batch-0006: RESIDUAL_DROP_LOW → pilot iterations 300→500, then non-orth correctors 1→2) |
+| Production | 25 | 0 |
+| Gate 3 | 13 CHECKS_PASS, 12 FLAGGED | — |
+
+0 UNRECOVERABLE; max skewness ≤ 4 on every mesh (P6-3 fix held on 25 new designs). Flags: 10 COEFF_NOT_CONVERGED at
+10° (CL std 4.5–20× the limit, 5 also CL_ALPHA_SLOPE), 2 CL_ALPHA_SLOPE only (slope below 3.0 /rad, converged).
+Mean wall time per run: mesh 1.7 min, pilot 7.5 min, production 27 min (non-converging 10° legs run the full 2000
+iterations; optional early stop recorded as an open item).
+
+### Review (decision B8)
+All 12 ACCEPTED with `ok_false_alarm` by the human: oscillating CL = unsteady flow that steady inviscid CFD only
+approximates; no flagged run showed a large separation bubble on the 30/70 % planes. Batch purpose (pipeline works
+end to end, unattended until review) met.
+
+### Acceptance
+- "One command produces the study summary HTML from the DB": `aero summary batch` → `runs/batch/summary.html`. Met.
+- 50–100 variants: reduced to 25 by the human (B1). Funnel, corrections, flag rate, review outcomes, wall time: in
+  the summary's "Pipeline stats" section; CL maps over the parameter space: CL vs α and CL vs each parameter
+  (CD maps deferred, B7).
+
 ## Status
-Phases 0–7 done (Phase 7 acceptance met 2026-11-25). Pending human item: failure labels for the
-11 harsh UNRECOVERABLE runs (P6-6). Next: Phase 8 (batch study).
+Phases 0–8 done (Phase 8 acceptance met 2026-11-25). Pending human item: failure labels for the
+11 harsh UNRECOVERABLE runs (P6-6). Next: Phase 9 (ML layer).

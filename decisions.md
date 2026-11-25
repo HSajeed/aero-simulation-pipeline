@@ -159,9 +159,10 @@ with refinement, extrapolated ≈ 0.007, still ~2× VSPAERO CDi 0.00365: invisci
 | B2 | Per-run lock: `flock` on `runs/<study>/<run>/.lock` held by `run_one`; a locked run is **skipped** (not waited for); `--force` refused while locked | A | Closes the "runner has no lock" open item: two `aero run` on one study can no longer run a case twice (tested with two real processes). The kernel drops the lock when its process dies, so a crash leaves no stale lock. |
 | B3 | Cutting-plane sampling runs automatically in the checks stage, before Gate 3; its outcome (or exception) is only logged to `case/log.sample_status` | A | Flagged runs reach the reviewer with contours. Report-only (rule 4): tested that a crash in sampling leaves the Gate 3 verdict identical. |
 | B4 | `aero summary <study> [--reports]` writes `runs/<study>/summary.html` from the DB: funnel (furthest gate passed per run; UNRECOVERABLE = gate of its last gate_results row; "after auto-correction" = had corrections at that gate), outcomes, failure codes + failure labels, flag reasons + review decisions, corrections by gate/code/setting with recovery count, wall time per stage, CL/CD vs each parameter and a 2-D map, run table with report links | A (V13 plan) | Phase 8 acceptance ("one command produces the study summary HTML from the DB"). |
-
-Pending (human): parameter ranges; alphas: provisional **10°/14°** (H), to be confirmed by a scratch probe of
-3 contrasting designs at 14° (centre, max sweep, min taper) during the dry run; change if all or none separate.
+| B5 | Parameter ranges = **harsh** (span 6–18 m, sweep 0–40°, taper 0.15–1.0, washout 0–8°, fineness 5–12), LHS seed 42; mesh = frozen medium (C6); `configs/study_batch.yaml` | H (2026-11-25) | Wide enough for real Gate 0 failures (tips too small at low taper) and geometry-dependent flags; also tests the P6-3 fix on new designs. |
+| B6 | Alphas **6°/10°** (pilot / Gate 2 at 6°) | H (2026-11-25), after a probe | Provisional 10/14 was probed in scratch (3 designs, batch settings): at 14° all 3 separated (2 not converged; 40° sweep converged but CL 22 % below VLM), so 10/14 would flag ~every run for one reason. At 10° the result depended on geometry: centre (sweep 20°, taper 0.575) and 40° sweep attached (CL −6 % / −2 % vs VLM), taper 0.25 already separating. 6/10 puts the geometry-dependent onset on the second alpha. Inviscid v1: this separation is numerical (sharp LE), not a stall prediction. |
+| B7 | Summary and run report show **results first**: summary = status line, CL vs α (one line per run, run number), CL vs each parameter (marker = α, colour = status, run number on every point), sortable run table; funnel/flags/corrections/wall time in a collapsed "Pipeline stats" section. Run report = parameters, flag reasons with readable check names and limits (slope as its range), results table, CL vs α (CFD vs VSPAERO, line), CL/CD history, cutting planes; gate tables (readable names, info rows hidden), corrections, residuals, reference values collapsed. CL only (CD plots later) | H (2026-11-25) | The first layout was hard to read (codes, raw metric names, 10 unlabelled scatter plots, text boxes). Presentation only: no gate, threshold or number changed. Also fixed the wrong "N of M *converged* runs were flagged" sentence. Supersedes the B4 layout. |
+| B8 | Review of the 12 flagged batch runs: **all 12 ACCEPTED, label `ok_false_alarm`**. 0001, 0020 (slope only, converged; slope 2.87 / below 3.0 /rad). 0002, 0003, 0005, 0007, 0010, 0012, 0017, 0022, 0023, 0024 (CL oscillating at 10°, 5 also slope): accepted "for now" | H (2026-11-25) | Human: oscillating CL means the case is really unsteady and steady inviscid CFD is only an approximation; reverse flow is acceptable unless it is a large separation bubble. Review aid (scratch script, not a gate; final iteration, 30/70 % planes, 10°): largest reversed region 0.012 c² (0003, trailing-edge spot at 30 %), 0002 0.007 c² at 30 % and none at 70 %; no flagged run showed a large bubble. CHECKS_PASS 0014 has a comparable region (0.007 c² at 70 %). Physically the oscillating runs would be rejected; this batch's purpose is to show the pipeline works end to end, which it does. |
 
 ## Pending decisions (human)
 
@@ -196,3 +197,19 @@ Pending (human): parameter ranges; alphas: provisional **10°/14°** (H), to be 
   `min_cells` 50k unchanged (still a sanity floor). CL(4°) is not in the asymptotic range at these
   resolutions (C4); a finer level (~740k cells) could be added if absolute CL accuracy matters later.
 - NON_ORTH_HIGH / NEGATIVE_VOLUMES correction sequences still use the old shared steps (no failures to test on).
+- **Many alphas in the summary**: with more than 2 alphas, CL vs parameter needs an α selector (one image
+  per α, a few lines of JS) instead of all markers on one panel. CD plots in the summary (B7: CL only for now).
+- **Reversed-flow size as a report number**: the B8 review used a scratch measurement (reversed area / c²
+  and chordwise extent on the cutting planes). Could become a report-only value (never a gate, rule 4) if
+  the human wants it in reports; thresholds for "large bubble" would be a human decision.
+- **Optional early stop for non-converging production legs** (human, 2026-11-25; optional, off by default).
+  Seen in the Phase 8 batch (e.g. batch-0022 at 10°: CL ≈ 0.55 oscillating ±0.01 against the 1e-3 std
+  limit), where a non-converging leg runs the full `max_iterations` 2000 with no new conclusion. The rule
+  is **not tied to any alpha**: it applies to every production leg of every alpha in the study, and the
+  human chooses per study whether it is on and, optionally, which alphas it covers (e.g.
+  `early_stop: {enabled: false, alphas: all | [..]}`). Idea: a solver-side check (e.g. a `runTimeControl`
+  function object or a segment check) that ends the leg when, after N iterations, CL std over the window
+  stays above k × `max_coeff_std`, recorded as COEFF_NOT_CONVERGED exactly like a run that reached the cap
+  (never as a solver crash, never a correction trigger, never a pass). N and k are thresholds → human
+  decision, in `configs/gates.yaml`. Saves wall time only when other runs are queued.
+  Manual kill of a running case is not a substitute (it would be recorded as a solver failure).
