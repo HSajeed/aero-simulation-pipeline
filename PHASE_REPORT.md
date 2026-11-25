@@ -254,9 +254,10 @@ All 10 flags are qualitatively identical, so this review set has little diversit
 - Review CLI end to end: verified by tests on a synthetic DB (list ordering, open, decide, bad/missing
   label, double decision, non-flagged refusal, status mirror, report shows the decision).
 - "Review 10 flagged runs end to end": **10 real FLAGGED runs are now in the queue**
-  (`aero review list high_aoa`). **Pending: the human review** (`aero review decide`), decisions.md P6-1;
-  also pending: failure labels for the 11 harsh UNRECOVERABLE runs (P6-6).
+  (`aero review list high_aoa`). **Met (2026-11-25):** all 10 reviewed via `aero review decide`:
+  REJECTED, label `separated_flow` (decision V20); every decision is in the `reviews` table.
+  Still pending (not part of the acceptance): failure labels for the 11 harsh UNRECOVERABLE runs (P6-6).
 
 ## Status
-Phases 0–6 built. Pending for Phase 6 sign-off: the human review of the 10 flagged high_aoa runs
-(decisions.md, "Pending decisions"). Next: Phase 7 (validation and mesh convergence).
+Phases 0–6 done (Phase 6 acceptance met 2026-11-25). Pending human item: failure labels for the
+11 harsh UNRECOVERABLE runs (P6-6). Next: Phase 7 (validation and mesh convergence; includes P6-3).

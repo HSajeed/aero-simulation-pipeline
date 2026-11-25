@@ -123,6 +123,7 @@ mass imbalance ≤ 1e-8. α₂ always stops at the 400-iteration minimum (R6), s
 | V17 | P6-6 done: `aero review label <run> --label L [--note]` / `aero review failures <study>`; labels `mesher_limitation`, `design_infeasible`, `geometry_artifact`, `pipeline_bug`, `other` (note required); one label per run; status stays UNRECOVERABLE | H (timing: now), A (labels, `pipeline_bug` added) | `pipeline_bug` keeps failures caused by our code out of the design/mesher classes in Phase 9. |
 | V18 | P6-7 done: cutting-plane contours. `aero sample` runs `postProcess` with a `surfaces` function object (cuttingPlane at 30 % / 70 % semi-span, U and p, cell values, legacy ASCII VTK) on each alpha's final time; reports draw u·e∞/U∞ (reversed flow) and Cp on the sampled mesh faces. No solve, results untouched, ~1 s per run; report-only (rule 4) | H (before review), A (method) | Lets the reviewer judge separation. Final iteration is instantaneous (oscillating at 20°). Not yet automatic after production (open item). |
 | V19 | P6-3 (SKEWNESS_HIGH correction sequence) deferred to Phase 7 | H (2026-11-25) | Mesh settings are revisited there anyway; test on the 9 harsh failures in scratch. |
+| V20 | P6-1 done: all 10 flagged high_aoa runs **REJECTED**, label `separated_flow` | H (2026-11-25) | Human reviewed the reports and cutting-plane contours: flow separation at high AoA (LE separation over the whole upper surface at 20°); 20° coefficients not converged, so not usable as aero numbers. Kept as labelled training data. Entered via `aero review decide` by the assistant on the reviewer's instruction (reviewer `sajied`, stated in each note). |
 
 ### Phase 6 outcome
 Harsh study: 9 CHECKS_PASS, 9 SKEWNESS_HIGH and 2 FEATURE_TOO_SMALL UNRECOVERABLE, **0 FLAGGED**.
@@ -135,7 +136,7 @@ High-AoA study (V12): **10/10 FLAGGED**, all with COEFF_NOT_CONVERGED, CL_VS_VSP
 
 | # | Question | Context / options |
 |---|---|---|
-| P6-1 | **Human review of the 10 flagged high_aoa runs** (Phase 6 acceptance) | `aero review list high_aoa`, `aero review open <run>`, `aero review decide <run> --accept|--reject --label L --note ...`. All 10 are qualitatively the same (20° CL collapse + oscillation, likely spurious separation in the inviscid solver); the label choice (e.g. `separated_flow`, `not_converged`, `reference_wrong`) is the human's. Reports now include cutting-plane contours: at 20° every run shows reversed flow over the whole upper surface from just behind the LE (LE separation), inside fairly coarse cells (~0.1–0.15 m vs 2 m chord); at 4° flow is attached. Real vs numerical separation remains the reviewer's call. |
+| P6-1 | ~~Human review of the 10 flagged high_aoa runs~~ Done (V20): 10 REJECTED, `separated_flow`. Phase 6 acceptance met. | |
 | P6-2 | ~~Is Gate 3 too loose?~~ Closed (V14). | |
 | P6-3 | SKEWNESS_HIGH correction sequence: deferred to Phase 7 (V19). | |
 | P6-5 | ~~High-AoA study~~ Done (V12); closed (V16). | |
